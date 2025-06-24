@@ -1,0 +1,63 @@
+Weebi Barcode Scanner Package
+Copyright 2025 Weebi.com
+
+This product includes software developed by Weebi.com (https://weebi.com).
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+================================================================================
+
+COMMERCIAL USE NOTICE
+
+This package is provided under Apache 2.0 license for the Flutter UI components.
+However, this package requires the Weebi Barcode Detection SDK for functionality,
+which has separate licensing terms:
+
+- Personal/Educational Use: Free tier available
+- Commercial Use: Enterprise license required
+- Competing Barcode Services: Contact for licensing terms
+
+For enterprise licensing and commercial use inquiries:
+Email: enterprise@weebi.com
+Website: https://weebi.com
+
+================================================================================
+
+BUNDLED COMPONENTS
+
+This package may include the following bundled components:
+
+1. Weebi YOLO Barcode Detection Model (best.rten)
+   - Source: https://huggingface.co/weebi/weebi_barcode_detector
+   - License: AGPL-3.0 (Ultralytics)
+   - Commercial use requires Ultralytics Enterprise License
+
+2. Weebi Rust Barcode Library (rust_barcode_lib.dll)
+   - Copyright: 2025 Weebi SAS
+   - License: Proprietary (bundled for evaluation)
+   - Commercial use requires Weebi Enterprise License
+
+3. Dart FFI Bindings
+   - Copyright: 2025 Weebi SAS
+   - License: Proprietary (bundled for evaluation)
+   - Commercial use requires Weebi Enterprise License
+
+================================================================================
+
+ATTRIBUTION REQUIREMENTS
+
+If you use this package in your application, please include the following
+attribution notice in your application's about section or credits:
+
+"Barcode scanning powered by Weebi Barcode Technology"
+https://weebi.com 
