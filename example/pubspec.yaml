@@ -1,12 +1,13 @@
-name: weebi_barcode_scanner_example
-description: Example app for weebi_barcode_scanner package
+name: barcode_scanner_example
+description: "Example app demonstrating weebi_barcode_scanner_package with OpenFoodFacts integration"
 
 publish_to: 'none'
 
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.5.0
+  sdk: ^3.0.0
+  flutter: ">=3.0.0"
 
 dependencies:
   flutter:
@@ -15,6 +16,7 @@ dependencies:
   weebi_barcode_scanner:
     path: ../
   permission_handler: ^11.0.0
+  openfoodfacts: ^3.23.0
 
 dev_dependencies:
   flutter_test:

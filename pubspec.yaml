@@ -1,12 +1,12 @@
 name: weebi_barcode_scanner
-description: A simplified Flutter package for barcode and QR code scanning on Windows, powered by YOLO object detection and ZXing decoding.
-version: 0.2.0+1  # Major version bump - FFI integration now working!
+description: "A comprehensive barcode scanner package with built-in camera support and cross-platform compatibility. Features point-of-sale optimizations, configurable scanning modes, and OpenFoodFacts integration."
+version: 0.2.1
 homepage: https://github.com/weebi-com/weebi_barcode_scanner
 repository: https://github.com/weebi-com/weebi_barcode_scanner_package
 issue_tracker: https://github.com/weebi-com/weebi_barcode_scanner_package/issues
 
 environment:
-  sdk: '>=3.0.0 <4.0.0'
+  sdk: ^3.0.0
   flutter: ">=3.0.0"
 
 dependencies:
@@ -14,24 +14,24 @@ dependencies:
     sdk: flutter
   
   # Windows camera support
-  camera: ^0.11.0+2
+  camera: ^0.11.1
   camera_windows: ^0.2.6+2
   camera_macos: ^0.0.9
   
   # File handling
-  path_provider: ^2.1.4
-  path: ^1.9.0
+  path: ^1.8.0
   
   # Image processing
   image: ^4.0.17
   
   # FFI for native library integration
-  ffi: ^2.1.3
+  ffi: ^2.0.1
+  openfoodfacts: ^3.23.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^3.0.0
+  flutter_lints: ^4.0.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

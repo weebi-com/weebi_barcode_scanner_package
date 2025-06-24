@@ -1,53 +1,69 @@
 import '../dart_barcode/dart_barcode.dart' as dart_barcode;
+import 'package:openfoodfacts/openfoodfacts.dart' as off;
 
 /// Represents a barcode scanning result
 class BarcodeResult {
-  /// The decoded text content of the barcode
+  /// The scanned barcode text
   final String text;
   
-  /// The barcode format (e.g., 'EAN-13', 'QR_CODE', etc.)
+  /// The format of the barcode (e.g., 'QR_CODE', 'EAN_13')
   final String format;
   
-  /// Product name from OpenFoodFacts lookup (optional)
+  /// Product name (if available)
   final String? productName;
   
-  /// Product brand from OpenFoodFacts lookup (optional)
+  /// Product brand (if available)
   final String? productBrand;
   
-  /// Additional product information (optional)
-  final Map<String, dynamic>? productInfo;
-  
-  /// Confidence score of the detection (0.0 to 1.0)
+  /// Confidence level of the scan (0.0 to 1.0)
   final double? confidence;
   
   /// Location of the barcode in the image (optional)
   final Map<String, int>? location;
+  
+  /// OpenFoodFacts product information (if available)
+  final off.Product? product;
+  
+  /// Whether product information was found
+  bool get hasProductInfo => product != null;
+  
+  /// Nutri-Score (A, B, C, D, E)
+  String? get nutriScore => product?.nutriscore;
+  
+  /// NOVA group (1-4, food processing level)
+  int? get novaGroup => product?.novaGroup;
+  
+  /// List of allergens
+  List<String> get allergens => product?.allergens?.names ?? [];
+  
+  /// Main product image URL
+  String? get imageUrl => product?.imageFrontUrl;
+  
+  /// Ingredients text
+  String? get ingredients => product?.ingredientsText;
   
   const BarcodeResult({
     required this.text,
     required this.format,
     this.productName,
     this.productBrand,
-    this.productInfo,
     this.confidence,
     this.location,
+    this.product,
   });
   
-  /// Convert from internal dart_barcode result
-  static BarcodeResult fromDartBarcodeResult(dart_barcode.BarcodeResult result) {
+  /// Create a BarcodeResult from dart_barcode result
+  factory BarcodeResult.fromDartBarcode(dart_barcode.BarcodeResult result) {
     return BarcodeResult(
       text: result.text,
       format: result.format,
-      productName: null, // Not available in current version
-      productBrand: null, // Not available in current version
-      productInfo: null, // Not available in current version
-      confidence: null, // Not available in current version
-      location: null, // Not available in current version
+      productName: null,
+      productBrand: null,
+      confidence: null,
+      location: null,
+      product: null,
     );
   }
-  
-  /// Whether this result has product information
-  bool get hasProductInfo => productName != null || productBrand != null;
   
   /// Create a copy with updated fields
   BarcodeResult copyWith({
@@ -55,23 +71,26 @@ class BarcodeResult {
     String? format,
     String? productName,
     String? productBrand,
-    Map<String, dynamic>? productInfo,
     double? confidence,
     Map<String, int>? location,
+    off.Product? product,
   }) {
     return BarcodeResult(
       text: text ?? this.text,
       format: format ?? this.format,
       productName: productName ?? this.productName,
       productBrand: productBrand ?? this.productBrand,
-      productInfo: productInfo ?? this.productInfo,
       confidence: confidence ?? this.confidence,
       location: location ?? this.location,
+      product: product ?? this.product,
     );
   }
   
   @override
   String toString() {
+    if (hasProductInfo) {
+      return 'BarcodeResult(text: $text, format: $format, product: ${productName ?? 'Unknown Product'})';
+    }
     return 'BarcodeResult(text: $text, format: $format)';
   }
   
@@ -82,14 +101,16 @@ class BarcodeResult {
         other.text == text &&
         other.format == format &&
         other.productName == productName &&
-        other.productBrand == productBrand;
+        other.productBrand == productBrand &&
+        other.product == product;
   }
   
   @override
-  int get hashCode {
-    return text.hashCode ^
-        format.hashCode ^
-        productName.hashCode ^
-        productBrand.hashCode;
-  }
+  int get hashCode => Object.hash(
+        text.hashCode,
+        format.hashCode,
+        productName.hashCode,
+        productBrand.hashCode,
+        product.hashCode,
+      );
 } 
