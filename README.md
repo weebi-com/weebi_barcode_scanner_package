@@ -1,16 +1,3 @@
-<!--
-This README describes the package. If you publish this package to pub.dev,
-this README's contents appear on the landing page for your package.
-
-For information about how to write a good package README, see the guide for
-[writing package pages](https://dart.dev/tools/pub/writing-package-pages).
-
-For general information about developing packages, see the Dart guide for
-[creating packages](https://dart.dev/guides/libraries/create-packages)
-and the Flutter guide for
-[developing packages and plugins](https://flutter.dev/to/develop-packages).
--->
-
 # Weebi Barcode Scanner
 
 ## ✅ PACKAGE STATUS: FFI ISSUE FIXED!
@@ -27,21 +14,15 @@ and the Flutter guide for
 
 **Reality check:**
 - **38MB of assets** (12MB model + 26MB DLL) must be manually copied
-- **30-60 minutes setup time** (not 5 minutes)
-- **Windows only** (no mobile support)
+- **Windows and MACOS only** (no mobile support)
 - **Complex dependencies** (FFI, native libraries, camera permissions)
 - **Manual asset management** required
-
-**This package reduces 1000+ lines of integration code to ~100 lines, but setup complexity remains significant.**
 
 ---
 
 A simplified Flutter package for barcode and QR code scanning on Windows, powered by YOLO object detection and ZXing decoding.
 
 ## ❗ Important Setup Requirements
-
-**This package requires manual setup of several components. It's not as simple as adding a dependency.**
-
 ### Prerequisites
 
 1. **Windows Development Environment**

@@ -44,29 +44,33 @@ void main() {
   });
   
   group('ScannerConfig', () {
-    test('creates default config', () {
-      const config = ScannerConfig.defaultConfig();
+    test('creates continuous config', () {
+      const config = ScannerConfig.continuous();
       
       expect(config.timeout, const Duration(seconds: 15));
       expect(config.enableImageEnhancement, isTrue);
       expect(config.enablePreprocessing, isTrue);
       expect(config.debugMode, isFalse);
+      expect(config.scanOnce, isFalse);
     });
     
-    test('creates fast config', () {
-      const config = ScannerConfig.fast();
+    test('creates point-of-sale config', () {
+      const config = ScannerConfig.pointOfSale();
       
-      expect(config.timeout, const Duration(seconds: 5));
-      expect(config.enableImageEnhancement, isFalse);
-      expect(config.enablePreprocessing, isFalse);
+      expect(config.timeout, const Duration(seconds: 10));
+      expect(config.scanInterval, const Duration(milliseconds: 500));
+      expect(config.scanOnce, isTrue);
+      expect(config.enableHapticFeedback, isTrue);
     });
     
-    test('creates accurate config', () {
-      const config = ScannerConfig.accurate();
+    test('creates default config', () {
+      const config = ScannerConfig();
       
-      expect(config.timeout, const Duration(seconds: 30));
+      expect(config.timeout, const Duration(seconds: 15));
       expect(config.enableImageEnhancement, isTrue);
       expect(config.enablePreprocessing, isTrue);
+      expect(config.debugMode, isFalse);
+      expect(config.scanOnce, isFalse);
     });
   });
 }

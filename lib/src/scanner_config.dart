@@ -36,6 +36,17 @@ class ScannerConfig {
   /// Whether to enable debug mode
   final bool debugMode;
   
+  /// Whether to stop scanning after first successful detection
+  /// Perfect for point-of-sale single scan use cases
+  final bool scanOnce;
+  
+  /// Whether to play haptic feedback on successful scan
+  final bool enableHapticFeedback;
+  
+  /// Whether to enable continuous auto-focus for better barcode detection
+  /// Recommended for varying distances and lighting conditions
+  final bool enableContinuousAutoFocus;
+
   const ScannerConfig({
     this.modelPath = 'assets/best.rten',
     this.useSuperResolution = true,
@@ -47,52 +58,58 @@ class ScannerConfig {
     this.enableImageEnhancement = true,
     this.enablePreprocessing = true,
     this.debugMode = false,
+    this.scanOnce = false,
+    this.enableHapticFeedback = true,
+    this.enableContinuousAutoFocus = true,
   });
   
-  /// Default configuration - works out of the box
-  const ScannerConfig.defaultConfig({
+  /// Continuous scanning mode - allows multiple scans, same product can be scanned multiple times
+  const ScannerConfig.continuous({
     this.modelPath = 'assets/best.rten',
     this.useSuperResolution = true,
     this.enableProductLookup = true,
     this.showOverlay = true,
-    this.overlayColor = Colors.green,
+    this.overlayColor = Colors.blue,
     this.scanInterval = const Duration(seconds: 1),
     this.timeout = const Duration(seconds: 15),
     this.enableImageEnhancement = true,
     this.enablePreprocessing = true,
     this.debugMode = false,
+    this.scanOnce = false,
+    this.enableHapticFeedback = true,
+    this.enableContinuousAutoFocus = true,
   });
   
-  /// High-performance configuration - faster scanning
-  const ScannerConfig.fast({
-    this.modelPath = 'assets/best.rten',
-    this.useSuperResolution = false, // Faster processing
-    this.enableProductLookup = false, // Skip product lookup for speed
-    this.showOverlay = true,
-    this.overlayColor = Colors.green,
-    this.scanInterval = const Duration(milliseconds: 500),
-    this.timeout = const Duration(seconds: 5),
-    this.enableImageEnhancement = false,
-    this.enablePreprocessing = false,
-    this.debugMode = false,
-  });
-  
-  /// Accuracy-focused configuration - best results
-  const ScannerConfig.accurate({
+  /// Point-of-sale mode - optimized for quick single scans with immediate feedback
+  const ScannerConfig.pointOfSale({
     this.modelPath = 'assets/best.rten',
     this.useSuperResolution = true,
-    this.enableProductLookup = true,
+    this.enableProductLookup = true, // Keep enabled for product info display
     this.showOverlay = true,
     this.overlayColor = Colors.green,
-    this.scanInterval = const Duration(milliseconds: 1500), // More time per scan
-    this.timeout = const Duration(seconds: 30),
+    this.scanInterval = const Duration(milliseconds: 500), // Faster scanning
+    this.timeout = const Duration(seconds: 10),
     this.enableImageEnhancement = true,
     this.enablePreprocessing = true,
     this.debugMode = false,
+    this.scanOnce = true, // Stop after first scan
+    this.enableHapticFeedback = true,
+    this.enableContinuousAutoFocus = true,
   });
   
   // Keep static constants for backward compatibility
-  static const ScannerConfig defaultConfiguration = ScannerConfig.defaultConfig();
-  static const ScannerConfig fastConfiguration = ScannerConfig.fast();
-  static const ScannerConfig accurateConfiguration = ScannerConfig.accurate();
+  static const ScannerConfig continuousMode = ScannerConfig.continuous();
+  static const ScannerConfig pointOfSaleMode = ScannerConfig.pointOfSale();
+}
+
+/// Camera resolution presets for different use cases
+enum CameraResolutionPreset {
+  /// Low resolution - fastest processing, lowest accuracy
+  low,
+  /// Medium resolution - balanced performance
+  medium,
+  /// High resolution - good accuracy, moderate speed
+  high,
+  /// Very high resolution - best accuracy, slowest processing
+  veryHigh,
 } 

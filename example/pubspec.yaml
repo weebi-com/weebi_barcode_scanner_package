@@ -11,9 +11,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  camera: ^0.11.1
   weebi_barcode_scanner:
     path: ../
-  camera: ^0.10.0
   permission_handler: ^11.0.0
 
 dev_dependencies:

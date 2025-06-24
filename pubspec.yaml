@@ -14,18 +14,19 @@ dependencies:
     sdk: flutter
   
   # Windows camera support
-  camera: ^0.10.5+5
+  camera: ^0.11.0+2
   camera_windows: ^0.2.6+2
+  camera_macos: ^0.0.9
   
   # File handling
-  path_provider: ^2.0.15
-  path: ^1.8.3
+  path_provider: ^2.1.4
+  path: ^1.9.0
   
   # Image processing
   image: ^4.0.17
   
   # FFI for native library integration
-  ffi: ^2.1.0
+  ffi: ^2.1.3
 
 dev_dependencies:
   flutter_test:

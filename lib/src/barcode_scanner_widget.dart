@@ -2,13 +2,13 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:camera/camera.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
-import '../dart_barcode/dart_barcode.dart' as dart_barcode;
 
+import '../dart_barcode/dart_barcode.dart' as dart_barcode;
 import 'barcode_result.dart';
 import 'scanner_config.dart';
+import 'platform_camera_manager.dart';
 
 /// Simple barcode scanner widget for Windows
 /// 
@@ -43,8 +43,8 @@ class BarcodeScannerWidget extends StatefulWidget {
   const BarcodeScannerWidget({
     super.key,
     required this.onBarcodeDetected,
+    this.config = ScannerConfig.continuousMode,
     this.onError,
-    this.config = ScannerConfig.defaultConfiguration,
     this.loadingWidget,
   });
 
@@ -53,52 +53,54 @@ class BarcodeScannerWidget extends StatefulWidget {
 }
 
 class _BarcodeScannerWidgetState extends State<BarcodeScannerWidget> {
-  CameraController? _cameraController;
-  bool _isInitialized = false;
-  bool _isProcessing = false;
-  String? _error;
+  PlatformCameraManager? _cameraManager;
   Timer? _scanTimer;
-  bool _sdkInitialized = false;
+  bool _isInitialized = false;
+  String? _errorMessage;
+  bool _isScanning = true;
   
   @override
   void initState() {
     super.initState();
-    _initializeScanner();
+    _initializeCamera();
   }
 
   @override
   void dispose() {
     _scanTimer?.cancel();
-    _cameraController?.dispose();
+    _cameraManager?.dispose();
     super.dispose();
   }
 
-  Future<void> _initializeScanner() async {
+  Future<void> _initializeCamera() async {
     try {
-      // Initialize the SDK first
+      // Initialize the barcode SDK first
       await _initializeSDK();
       
-      // Initialize camera (Windows-optimized)
-      await _initializeCamera();
+      _cameraManager = PlatformCameraManager.create();
+      await _cameraManager!.initialize(widget.config);
       
-      // Start periodic scanning
-      _startPeriodicScanning();
-      
-      setState(() {
-        _isInitialized = true;
-      });
+      if (mounted) {
+        setState(() {
+          _isInitialized = true;
+        });
+        
+        _startScanning();
+      }
     } catch (e) {
-      _handleError('Failed to initialize scanner: $e');
+      debugPrint('❌ Camera initialization failed: $e');
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Failed to initialize camera: $e';
+        });
+        widget.onError?.call(_errorMessage!);
+      }
     }
   }
 
   Future<void> _initializeSDK() async {
-    if (_sdkInitialized) return;
-    
     try {
       debugPrint('🤖 Initializing YOLO Barcode Detection Model');
-      debugPrint('📖 Source: https://huggingface.co/weebi/weebi_barcode_detector/blob/main/best.rten');
-      debugPrint('⚖️  License: AGPL-3.0 (Ultralytics)');
       
       // Copy model from assets to writable location
       final appDir = await getApplicationDocumentsDirectory();
@@ -118,7 +120,6 @@ class _BarcodeScannerWidgetState extends State<BarcodeScannerWidget> {
       final success = await dart_barcode.initializeBarcodeSDK(modelFile.path);
       
       if (success) {
-        _sdkInitialized = true;
         debugPrint('✅ Barcode SDK initialized successfully');
       } else {
         throw Exception('Failed to initialize barcode SDK');
@@ -128,215 +129,198 @@ class _BarcodeScannerWidgetState extends State<BarcodeScannerWidget> {
     }
   }
 
-  Future<void> _initializeCamera() async {
-    try {
-      final cameras = await availableCameras();
-      if (cameras.isEmpty) {
-        throw Exception('No cameras available');
+  void _startScanning() {
+    if (!_isScanning) return;
+    
+    _scanTimer = Timer.periodic(widget.config.scanInterval, (timer) async {
+      if (!_isScanning || !mounted || _cameraManager == null) {
+        timer.cancel();
+        return;
       }
       
-      // Windows-optimized camera setup
-      _cameraController = CameraController(
-        cameras.first, // Use first available camera (typically main webcam)
-        ResolutionPreset.high,
-        enableAudio: false,
-        imageFormatGroup: ImageFormatGroup.bgra8888, // Windows optimized
-      );
-      
-      // Windows needs longer timeout for camera initialization
-      await _cameraController!.initialize().timeout(
-        const Duration(seconds: 15),
-        onTimeout: () {
-          throw Exception('Camera initialization timed out (15s)');
-        },
-      );
-      
-      // Set focus mode (non-critical if it fails)
       try {
-        await _cameraController!.setFocusMode(FocusMode.auto);
+        await _captureAndProcess();
       } catch (e) {
-        debugPrint('Focus mode setting failed (non-critical): $e');
-      }
-      
-      debugPrint('✅ Camera initialized successfully');
-      debugPrint('📷 Camera resolution: ${_cameraController!.value.previewSize}');
-    } catch (e) {
-      throw Exception('Camera initialization failed: $e');
-    }
-  }
-
-  void _startPeriodicScanning() {
-    _scanTimer = Timer.periodic(widget.config.scanInterval, (timer) {
-      if (!_isProcessing && _cameraController != null && _cameraController!.value.isInitialized) {
-        _captureAndProcess();
+        debugPrint('❌ Scanning error: $e');
+        widget.onError?.call('Scanning error: $e');
       }
     });
   }
 
   Future<void> _captureAndProcess() async {
-    if (_isProcessing || _cameraController == null) return;
-    
-    setState(() => _isProcessing = true);
+    if (_cameraManager == null || !_cameraManager!.isInitialized) {
+      return;
+    }
     
     try {
-      // Capture image
-      final image = await _cameraController!.takePicture();
-      final bytes = await File(image.path).readAsBytes();
+      final imageBytes = await _cameraManager!.takePicture();
+      final result = await _processImage(imageBytes);
       
-      // Process with dart_barcode SDK
-      final results = await dart_barcode.processImage(
-        format: dart_barcode.RustImageFormat.jpeg,
-        bytes: bytes,
-        useSuperResolution: widget.config.useSuperResolution,
-      );
-      
-      // Handle results
-      if (results.isNotEmpty) {
-        final result = BarcodeResult.fromDartBarcodeResult(results.first);
-        debugPrint('🎯 Barcode detected: ${result.text} (${result.format})');
-        widget.onBarcodeDetected(result);
+      if (result != null && mounted) {
+        _handleBarcodeDetected(result);
       }
-      
-      // Clean up temporary image file
-      await File(image.path).delete().catchError((e) {
-        debugPrint('Failed to delete temp image: $e');
-        return File(''); // Return empty file on error
-      });
-      
     } catch (e) {
-      debugPrint('Processing error: $e');
-      // Don't show error for normal processing failures (no barcode found, etc.)
-      // Only show critical errors via _handleError
-    } finally {
-      if (mounted) {
-        setState(() => _isProcessing = false);
-      }
+      debugPrint('❌ Image capture/processing failed: $e');
+      // Don't call error callback for individual capture failures
+      // as they're often temporary (camera busy, etc.)
     }
   }
 
-  void _handleError(String error) {
-    debugPrint('❌ Scanner error: $error');
-    setState(() => _error = error);
-    widget.onError?.call(error);
+  Future<BarcodeResult?> _processImage(Uint8List imageBytes) async {
+    try {
+      // Process the image using the dart_barcode SDK
+      final results = await dart_barcode.processImage(
+        format: dart_barcode.RustImageFormat.jpeg,
+        bytes: imageBytes,
+        useSuperResolution: widget.config.useSuperResolution,
+      );
+      
+      if (results.isNotEmpty) {
+        final result = results.first;
+        return BarcodeResult(
+          text: result.text,
+          format: result.format,
+          productName: null, // TODO: Add product lookup if enabled
+          productBrand: null,
+        );
+      }
+      
+      return null;
+    } catch (e) {
+      debugPrint('❌ Image processing failed: $e');
+      return null;
+    }
   }
 
-  Future<void> _retryInitialization() async {
+  void _handleBarcodeDetected(BarcodeResult result) {
+    debugPrint('🎯 Barcode detected: ${result.text} (${result.format})');
+    
+    // Play haptic feedback if enabled
+    if (widget.config.enableHapticFeedback) {
+      _playSuccessSound();
+    }
+    
+    widget.onBarcodeDetected(result);
+    
+    // Stop scanning if configured for single scan
+    if (widget.config.scanOnce) {
+      _stopScanning();
+    }
+  }
+
+  void _playSuccessSound() {
+    try {
+      HapticFeedback.lightImpact();
+      debugPrint('✅ Haptic feedback played');
+    } catch (e) {
+      debugPrint('❌ Failed to play haptic feedback: $e');
+    }
+  }
+
+  void _stopScanning() {
     setState(() {
-      _error = null;
-      _isInitialized = false;
+      _isScanning = false;
     });
-    
-    // Clean up existing resources
     _scanTimer?.cancel();
-    await _cameraController?.dispose();
-    _cameraController = null;
-    
-    // Wait a bit for cleanup on Windows
-    await Future.delayed(const Duration(milliseconds: 500));
-    
-    // Retry initialization
-    _initializeScanner();
+    debugPrint('⏹️ Scanning stopped');
+  }
+
+  void resumeScanning() {
+    if (!_isScanning && _isInitialized) {
+      setState(() {
+        _isScanning = true;
+      });
+      _startScanning();
+      debugPrint('▶️ Scanning resumed');
+    }
+  }
+
+  void stopScanning() {
+    _stopScanning();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!_isInitialized) {
-      return widget.loadingWidget ?? 
-          Container(
-            color: Colors.black,
-            child: const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(color: Colors.white),
-                  SizedBox(height: 16),
-                  Text(
-                    'Initializing Scanner...',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                ],
-              ),
+    if (_errorMessage != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error, size: 48, color: Colors.red),
+            const SizedBox(height: 16),
+            Text(
+              'Camera Error',
+              style: Theme.of(context).textTheme.titleLarge,
             ),
-          );
+            const SizedBox(height: 8),
+            Text(
+              _errorMessage!,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () {
+                setState(() {
+                  _errorMessage = null;
+                  _isInitialized = false;
+                });
+                _initializeCamera();
+              },
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      );
     }
     
-    if (_error != null) {
-      return Container(
-        color: Colors.black,
-        child: Center(
+    if (!_isInitialized || _cameraManager == null) {
+      return widget.loadingWidget ?? 
+        const Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error, size: 64, color: Colors.red),
-              const SizedBox(height: 16),
-              Text(
-                'Error: $_error',
-                style: const TextStyle(color: Colors.white),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: _retryInitialization,
-                child: const Text('Retry'),
-              ),
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Initializing Camera...'),
             ],
           ),
-        ),
-      );
-    }
-    
-    if (_cameraController == null || !_cameraController!.value.isInitialized) {
-      return Container(
-        color: Colors.black,
-        child: const Center(
-          child: Text(
-            'Camera not available',
-            style: TextStyle(color: Colors.white),
-          ),
-        ),
-      );
+        );
     }
     
     return Stack(
       children: [
         // Camera preview
-        CameraPreview(_cameraController!),
+        _cameraManager!.buildPreviewWidget(),
         
-        // Scanning overlay
+        // Overlay
         if (widget.config.showOverlay)
-          CustomPaint(
-            painter: _ScannerOverlayPainter(
-              color: widget.config.overlayColor,
+          Container(
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: widget.config.overlayColor,
+                width: 2.0,
+              ),
             ),
-            child: Container(),
           ),
         
-        // Processing indicator
-        if (_isProcessing)
-          Positioned(
-            top: 16,
-            right: 16,
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.black54,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
+        // Scanning status indicator
+        if (!_isScanning)
+          Container(
+            color: Colors.black54,
+            child: const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
-                  ),
-                  SizedBox(width: 8),
+                  Icon(Icons.pause_circle, size: 64, color: Colors.white),
+                  SizedBox(height: 16),
                   Text(
-                    'Scanning...',
-                    style: TextStyle(color: Colors.white),
+                    'Scanning Paused',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ],
               ),
@@ -345,56 +329,4 @@ class _BarcodeScannerWidgetState extends State<BarcodeScannerWidget> {
       ],
     );
   }
-}
-
-/// Custom painter for the scanning overlay
-class _ScannerOverlayPainter extends CustomPainter {
-  final Color color;
-  
-  _ScannerOverlayPainter({required this.color});
-  
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.0;
-    
-    const overlayWidth = 400.0;
-    const overlayHeight = 150.0;
-    
-    final rect = Rect.fromCenter(
-      center: Offset(size.width / 2, size.height / 2),
-      width: overlayWidth,
-      height: overlayHeight,
-    );
-    
-    canvas.drawRect(rect, paint);
-    
-    // Add corner indicators
-    const cornerSize = 20.0;
-    final cornerPaint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3.0;
-    
-    // Draw corner brackets
-    _drawCorner(canvas, cornerPaint, rect.topLeft, cornerSize, true, true);
-    _drawCorner(canvas, cornerPaint, rect.topRight, cornerSize, false, true);
-    _drawCorner(canvas, cornerPaint, rect.bottomLeft, cornerSize, true, false);
-    _drawCorner(canvas, cornerPaint, rect.bottomRight, cornerSize, false, false);
-  }
-  
-  void _drawCorner(Canvas canvas, Paint paint, Offset corner, double size, bool isLeft, bool isTop) {
-    final horizontalEnd = isLeft ? corner.dx + size : corner.dx - size;
-    final verticalEnd = isTop ? corner.dy + size : corner.dy - size;
-    
-    // Horizontal line
-    canvas.drawLine(corner, Offset(horizontalEnd, corner.dy), paint);
-    // Vertical line
-    canvas.drawLine(corner, Offset(corner.dx, verticalEnd), paint);
-  }
-  
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 } 

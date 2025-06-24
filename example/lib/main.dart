@@ -11,9 +11,10 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Weebi Barcode Scanner Demo',
+      title: 'Barcode Scanner Demo',
       theme: ThemeData(
-        primarySwatch: Colors.blue,
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+        useMaterial3: true,
       ),
       home: const ScannerPage(),
     );
@@ -28,153 +29,248 @@ class ScannerPage extends StatefulWidget {
 }
 
 class _ScannerPageState extends State<ScannerPage> {
-  String? _lastResult;
-  String? _lastFormat;
-  String? _lastProduct;
+  bool _isPointOfSaleMode = true;
+  BarcodeResult? _lastResult;
+  List<BarcodeResult> _scanHistory = [];
+
+  ScannerConfig get _currentConfig => _isPointOfSaleMode 
+    ? ScannerConfig.pointOfSaleMode 
+    : ScannerConfig.continuousMode;
+
+  void _onBarcodeDetected(BarcodeResult result) {
+    setState(() {
+      _lastResult = result;
+      _scanHistory.insert(0, result); // Add to beginning of list
+      if (_scanHistory.length > 10) {
+        _scanHistory = _scanHistory.take(10).toList(); // Keep last 10
+      }
+    });
+  }
+
+  void _onScannerError(String error) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Scanner Error: $error'),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+
+  void _toggleMode() {
+    setState(() {
+      _isPointOfSaleMode = !_isPointOfSaleMode;
+    });
+  }
+
+  void _clearHistory() {
+    setState(() {
+      _scanHistory.clear();
+      _lastResult = null;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Barcode Scanner'),
-        backgroundColor: Colors.blue,
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        actions: [
+          Switch(
+            value: _isPointOfSaleMode,
+            onChanged: (value) => _toggleMode(),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(right: 16.0),
+            child: Center(
+              child: Text(
+                _isPointOfSaleMode ? 'POS' : 'Continuous',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+        ],
       ),
-      body: Column(
+      body: Row(
         children: [
-          // Scanner widget - this is all you need!
+          // Scanner area (left side)
           Expanded(
-            child: BarcodeScannerWidget(
-              onBarcodeDetected: (result) {
-                setState(() {
-                  _lastResult = result.text;
-                  _lastFormat = result.format;
-                  _lastProduct = result.productName;
-                });
-                
-                // Show result dialog
-                _showResultDialog(result);
-              },
-              onError: (error) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Scanner Error: $error'),
-                    backgroundColor: Colors.red,
+            flex: 2,
+            child: Container(
+              margin: const EdgeInsets.all(8.0),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12.0),
+                border: Border.all(color: Colors.grey[300]!),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: BarcodeScannerWidget(
+                key: ValueKey(_isPointOfSaleMode), // Rebuild when mode changes
+                config: _currentConfig,
+                onBarcodeDetected: _onBarcodeDetected,
+                onError: _onScannerError,
+                loadingWidget: const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CircularProgressIndicator(),
+                      SizedBox(height: 16),
+                      Text('Initializing Camera...'),
+                    ],
                   ),
-                );
-              },
-              // Optional: Use different config
-              // config: ScannerConfig.fastConfig, // or ScannerConfig.accurateConfig
+                ),
+              ),
             ),
           ),
           
-          // Status bar
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.grey[100],
-              border: Border(
-                top: BorderSide(color: Colors.grey[300]!),
+          // Product info / results area (right side)
+          Expanded(
+            flex: 1,
+            child: Container(
+              margin: const EdgeInsets.all(8.0),
+              padding: const EdgeInsets.all(16.0),
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                borderRadius: BorderRadius.circular(12.0),
+                border: Border.all(color: Colors.grey[300]!),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Mode indicator
+                  Row(
+                    children: [
+                      Icon(
+                        _isPointOfSaleMode ? Icons.point_of_sale : Icons.repeat,
+                        color: _isPointOfSaleMode ? Colors.green : Colors.blue,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        _isPointOfSaleMode ? 'Point of Sale' : 'Continuous Scan',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  
+                  const SizedBox(height: 16),
+                  
+                  // Last scanned result
+                  if (_lastResult != null) ...[
+                    const Text(
+                      'Last Scanned:',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12.0),
+                      decoration: BoxDecoration(
+                        color: Colors.blue[50],
+                        borderRadius: BorderRadius.circular(8.0),
+                        border: Border.all(color: Colors.blue[200]!),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _lastResult!.text,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            'Format: ${_lastResult!.format}',
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 14,
+                            ),
+                          ),
+                          if (_lastResult!.productName != null)
+                            Text(
+                              'Product: ${_lastResult!.productName}',
+                              style: const TextStyle(fontSize: 14),
+                            ),
+                          if (_lastResult!.productBrand != null)
+                            Text(
+                              'Brand: ${_lastResult!.productBrand}',
+                              style: const TextStyle(fontSize: 14),
+                            ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                  
+                  // Scan history
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Recent Scans:',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      if (_scanHistory.isNotEmpty)
+                        TextButton(
+                          onPressed: _clearHistory,
+                          child: const Text('Clear'),
+                        ),
+                    ],
+                  ),
+                  
+                  const SizedBox(height: 8),
+                  
+                  Expanded(
+                    child: _scanHistory.isEmpty
+                        ? Center(
+                            child: Text(
+                              _isPointOfSaleMode 
+                                ? 'Point camera at barcode\nScanning will stop after detection'
+                                : 'Point camera at barcode\nContinuous scanning mode',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 14,
+                              ),
+                            ),
+                          )
+                        : ListView.builder(
+                            itemCount: _scanHistory.length,
+                            itemBuilder: (context, index) {
+                              final result = _scanHistory[index];
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 8.0),
+                                padding: const EdgeInsets.all(8.0),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(6.0),
+                                  border: Border.all(color: Colors.grey[300]!),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      result.text,
+                                      style: const TextStyle(fontWeight: FontWeight.bold),
+                                    ),
+                                    Text(
+                                      result.format,
+                                      style: TextStyle(
+                                        color: Colors.grey[600],
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                ],
               ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _lastResult != null 
-                    ? 'Last scanned: $_lastResult'
-                    : 'Point camera at a barcode',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                if (_lastFormat != null)
-                  Text(
-                    'Format: $_lastFormat',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                if (_lastProduct != null)
-                  Text(
-                    'Product: $_lastProduct',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.blue[600],
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showResultDialog(BarcodeResult result) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.qr_code_scanner, color: Colors.green),
-            SizedBox(width: 8),
-            Text('Barcode Found!'),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildResultRow('Code:', result.text),
-            _buildResultRow('Format:', result.format),
-            if (result.productName != null)
-              _buildResultRow('Product:', result.productName!),
-            if (result.productBrand != null)
-              _buildResultRow('Brand:', result.productBrand!),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
-          if (result.hasProductInfo)
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-                // Could navigate to product details page
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Product: ${result.productName}'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              },
-              child: const Text('View Product'),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildResultRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 60,
-            child: Text(
-              label,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-          Expanded(
-            child: SelectableText(value),
           ),
         ],
       ),
