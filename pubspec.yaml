@@ -1,13 +1,13 @@
 name: weebi_barcode_scanner
-description: A simple, high-performance barcode scanner for Windows Flutter apps. Privacy-first and offline.
-version: 1.0.1
-homepage: https://github.com/weebi-com/weebi_barcode_scanner_package
+description: A simplified Flutter package for barcode and QR code scanning on Windows, powered by YOLO object detection and ZXing decoding.
+version: 0.2.0+1  # Major version bump - FFI integration now working!
+homepage: https://github.com/weebi-com/weebi_barcode_scanner
 repository: https://github.com/weebi-com/weebi_barcode_scanner_package
 issue_tracker: https://github.com/weebi-com/weebi_barcode_scanner_package/issues
 
 environment:
-  sdk: '>=3.1.5 <4.0.0'
-  flutter: ">=3.13.0"
+  sdk: '>=3.0.0 <4.0.0'
+  flutter: ">=3.0.0"
 
 dependencies:
   flutter:

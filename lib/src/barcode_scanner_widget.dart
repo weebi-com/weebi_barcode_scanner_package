@@ -43,8 +43,8 @@ class BarcodeScannerWidget extends StatefulWidget {
   const BarcodeScannerWidget({
     super.key,
     required this.onBarcodeDetected,
-    this.config = ScannerConfig.defaultConfig,
     this.onError,
+    this.config = ScannerConfig.defaultConfiguration,
     this.loadingWidget,
   });
 
@@ -185,7 +185,7 @@ class _BarcodeScannerWidgetState extends State<BarcodeScannerWidget> {
       
       // Process with dart_barcode SDK
       final results = await dart_barcode.processImage(
-        format: dart_barcode.RustImageFormat.Jpeg,
+        format: dart_barcode.RustImageFormat.jpeg,
         bytes: bytes,
         useSuperResolution: widget.config.useSuperResolution,
       );
@@ -200,6 +200,7 @@ class _BarcodeScannerWidgetState extends State<BarcodeScannerWidget> {
       // Clean up temporary image file
       await File(image.path).delete().catchError((e) {
         debugPrint('Failed to delete temp image: $e');
+        return File(''); // Return empty file on error
       });
       
     } catch (e) {

@@ -1,6 +1,5 @@
 import 'dart:typed_data';
 import 'package:image/image.dart' as img;
-import '../dart_barcode.dart';
 
 /// Represents the result of image processing operations
 class ProcessedImage {

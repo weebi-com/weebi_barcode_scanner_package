@@ -1,223 +1,331 @@
-import 'dart:typed_data';
+import 'dart:ui' as ui;
+import 'package:flutter/foundation.dart';
 import 'package:image/image.dart' as img;
 
-/// Utility class for handling image operations
+/// Utility functions for image processing and conversion
 class ImageUtils {
-  // Target dimensions for YOLO model
-  static const int yoloInputSize = 640;
-
-  // Helper function to create a blank RGB image
-  static img.Image _createRgbImage(int width, int height) {
-    // Create a new image with RGBA format
-    final image = img.Image(width: width, height: height, numChannels: 4);
-    
-    // Fill with black (0, 0, 0, 255)
-    for (var y = 0; y < height; y++) {
-      for (var x = 0; x < width; x++) {
-        final pixel = image.getPixel(x, y);
-        pixel.setRgba(0, 0, 0, 255);
-      }
-    }
-    return image;
-  }
-
-  // Convert any image to RGB format
-  static img.Image _convertToRgb(img.Image image) {
-    // If already in RGB/RGBA format, return as is
-    if (image.numChannels >= 3) {
-      return image;
-    }
-    
-    // Create a new RGBA image
-    final rgbaImage = img.Image(width: image.width, height: image.height, numChannels: 4);
-    
-    // Convert grayscale to RGBA by iterating through each pixel
-    for (var y = 0; y < image.height; y++) {
-      for (var x = 0; x < image.width; x++) {
-        // Get the grayscale value (0-255) - use the first channel for grayscale
-        // since grayscale images only have one channel
-        final pixel = image.getPixel(x, y);
-        final value = pixel.r;  // For grayscale, r=g=b=value
-        
-        // Set the same value for RGB channels and 255 for alpha
-        rgbaImage.setPixelRgba(x, y, value, value, value, 255);
-      }
-    }
-    
-    return rgbaImage;
-  }
-
-  /// Converts image bytes to RGBA format and returns the converted image.
-  /// Returns null if the image format is not supported or if the input is empty.
+  /// Convert image data to RGBA format suitable for processing
   static ({Uint8List bytes, int width, int height})? convertToRgba(Uint8List imageData) {
     if (imageData.isEmpty) {
-      print('convertToRgba: Empty image data provided');
+      debugPrint('convertToRgba: Empty image data provided');
       return null;
     }
 
     try {
-      print('convertToRgba: Decoding image (${imageData.length} bytes)');
+      debugPrint('convertToRgba: Decoding image (${imageData.length} bytes)');
       final image = img.decodeImage(imageData);
       if (image == null) {
-        print('convertToRgba: Failed to decode image');
+        debugPrint('convertToRgba: Failed to decode image');
         return null;
       }
 
-      print('convertToRgba: Decoded image - ${image.width}x${image.height}, ${image.numChannels} channels, format: ${image.format}');
+      debugPrint('convertToRgba: Decoded image - ${image.width}x${image.height}, ${image.numChannels} channels, format: ${image.format}');
       
       // Convert to RGBA format
       final rgbaImage = _convertToRgb(image);
       final rgbaBytes = Uint8List.fromList(rgbaImage.getBytes(order: img.ChannelOrder.rgba));
       
-      print('convertToRgba: Converted to RGBA - ${rgbaImage.width}x${rgbaImage.height}, ${rgbaBytes.length} bytes');
+      debugPrint('convertToRgba: Converted to RGBA - ${rgbaImage.width}x${rgbaImage.height}, ${rgbaBytes.length} bytes');
       
       // Debug: Print first pixel
       if (rgbaBytes.length >= 4) {
-        print('First pixel: R=${rgbaBytes[0]}, G=${rgbaBytes[1]}, B=${rgbaBytes[2]}, A=${rgbaBytes[3]}');
+        debugPrint('First pixel: R=${rgbaBytes[0]}, G=${rgbaBytes[1]}, B=${rgbaBytes[2]}, A=${rgbaBytes[3]}');
       }
       
       return (
         bytes: rgbaBytes,
         width: rgbaImage.width,
-        height: rgbaImage.height,
+        height: rgbaImage.height
       );
     } catch (e) {
-      print('convertToRgba error: $e');
+      debugPrint('convertToRgba error: $e');
       throw Exception('Failed to convert image to RGBA format: $e');
     }
   }
 
-  /// Extracts width and height from raw image bytes.
-  /// Returns a tuple of (width, height) if successful, or null if the image format is not supported.
-  static (int width, int height)? getImageDimensions(Uint8List imageBytes) {
+  /// Convert image to RGB format (ensure 3 channels)
+  static img.Image _convertToRgb(img.Image image) {
+    if (image.numChannels == 3) {
+      return image; // Already RGB
+    }
+    
+    // Convert to RGB using the proper image package API
+    return img.copyResize(image, width: image.width, height: image.height);
+  }
+
+  /// Get image dimensions from bytes
+  static (int, int)? getImageDimensions(Uint8List imageBytes) {
     try {
       final image = img.decodeImage(imageBytes);
       if (image == null) return null;
       return (image.width, image.height);
     } catch (e) {
-      print('getImageDimensions error: $e');
+      debugPrint('getImageDimensions error: $e');
       return null;
     }
   }
 
-  /// Prepares an image for YOLO model input by resizing to 640x640 with padding
-  /// and converting to RGB format.
-  /// Returns the processed image bytes and dimensions, or null on failure.
-  static ({Uint8List bytes, int width, int height})? prepareForYolo(Uint8List imageBytes) {
+  /// Prepare image for YOLO processing (resize to square, convert to RGB)
+  static ({Uint8List bytes, int width, int height})? prepareForYolo(
+    Uint8List imageBytes, {
+    int yoloInputSize = 640,
+  }) {
     try {
-      // Decode the image
       final image = img.decodeImage(imageBytes);
       if (image == null) {
-        print('prepareForYolo: Failed to decode image');
+        debugPrint('prepareForYolo: Failed to decode image');
         return null;
       }
 
-      // Convert to RGB if needed
-      final rgbImage = _convertToRgb(image);
-      
-      // Calculate scaling factor to maintain aspect ratio
-      final widthRatio = yoloInputSize / rgbImage.width;
-      final heightRatio = yoloInputSize / rgbImage.height;
-      final scale = widthRatio < heightRatio ? widthRatio : heightRatio;
-      
-      // Calculate new dimensions
-      final newWidth = (rgbImage.width * scale).round();
-      final newHeight = (rgbImage.height * scale).round();
-      
-      // Create a new image with the target size and black background
-      final paddedImage = _createRgbImage(yoloInputSize, yoloInputSize);
-      
-      // Resize the original image
+      // Resize to square maintaining aspect ratio
       final resized = img.copyResize(
-        rgbImage,
-        width: newWidth,
-        height: newHeight,
+        image,
+        width: yoloInputSize,
+        height: yoloInputSize,
+        interpolation: img.Interpolation.linear,
       );
+
+      // Convert to RGB
+      final rgbImage = _convertToRgb(resized);
+      final rgbBytes = Uint8List.fromList(rgbImage.getBytes(order: img.ChannelOrder.rgb));
       
-      // Calculate padding to center the image
-      final padX = (yoloInputSize - newWidth) ~/ 2;
-      final padY = (yoloInputSize - newHeight) ~/ 2;
-      
-      // Copy the resized image to the center of the padded image
-      for (var y = 0; y < resized.height; y++) {
-        for (var x = 0; x < resized.width; x++) {
-          final srcPixel = resized.getPixel(x, y);
-          final dstX = padX + x;
-          final dstY = padY + y;
-          
-          if (dstX < yoloInputSize && dstY < yoloInputSize) {
-            final dstPixel = paddedImage.getPixel(dstX, dstY);
-            dstPixel.r = srcPixel.r.toInt();
-            dstPixel.g = srcPixel.g.toInt();
-            dstPixel.b = srcPixel.b.toInt();
-          }
-        }
-      }
-      
-      // Convert to RGB format (3 channels per pixel)
-      final rgbBytes = Uint8List(yoloInputSize * yoloInputSize * 3);
-      var idx = 0;
-      
-      for (var y = 0; y < yoloInputSize; y++) {
-        for (var x = 0; x < yoloInputSize; x++) {
-          final pixel = paddedImage.getPixel(x, y);
-          rgbBytes[idx++] = pixel.r.toInt();
-          rgbBytes[idx++] = pixel.g.toInt();
-          rgbBytes[idx++] = pixel.b.toInt();
-        }
-      }
-      
-      print('Prepared image: ${yoloInputSize}x$yoloInputSize, ${rgbBytes.length} bytes (RGB)');
+      debugPrint('Prepared image: ${yoloInputSize}x$yoloInputSize, ${rgbBytes.length} bytes (RGB)');
       
       return (
         bytes: rgbBytes,
-        width: yoloInputSize,
-        height: yoloInputSize,
+        width: rgbImage.width,
+        height: rgbImage.height,
       );
     } catch (e, stackTrace) {
-      print('Error preparing image for YOLO: $e');
-      print('Stack trace: $stackTrace');
+      debugPrint('Error preparing image for YOLO: $e');
+      debugPrint('Stack trace: $stackTrace');
       rethrow;
     }
   }
 
   /// Convert image bytes to grayscale format
   static ImageData? convertToGrayscale(Uint8List imageBytes) {
-    print('convertToGrayscale: Decoding image (${imageBytes.length} bytes)');
+    debugPrint('convertToGrayscale: Decoding image (${imageBytes.length} bytes)');
     
     // Decode the image bytes
     final image = img.decodeImage(imageBytes);
     if (image == null) {
-      print('convertToGrayscale: Failed to decode image');
+      debugPrint('convertToGrayscale: Failed to decode image');
       return null;
     }
     
-    print('convertToGrayscale: Decoded image - ${image.width}x${image.height}, ${image.numChannels} channels, format: ${image.format}');
+    debugPrint('convertToGrayscale: Decoded image - ${image.width}x${image.height}, ${image.numChannels} channels, format: ${image.format}');
     
     // Convert to grayscale
     final grayImage = img.grayscale(image);
     
-    // Get raw bytes (each pixel is one byte)
-    final bytes = Uint8List(grayImage.width * grayImage.height);
-    var i = 0;
-    for (var y = 0; y < grayImage.height; y++) {
-      for (var x = 0; x < grayImage.width; x++) {
-        final pixel = grayImage.getPixel(x, y);
-        // Get red channel which now contains the grayscale value
-        bytes[i++] = pixel.r.toInt();
-      }
-    }
+    // Get the bytes as Uint8List
+    final bytes = Uint8List.fromList(grayImage.getBytes());
     
-    print('convertToGrayscale: Converted to grayscale - ${grayImage.width}x${grayImage.height}, ${bytes.length} bytes');
+    debugPrint('convertToGrayscale: Converted to grayscale - ${grayImage.width}x${grayImage.height}, ${bytes.length} bytes');
     
     // Print first few pixel values for debugging
     if (bytes.isNotEmpty) {
       final firstPixels = bytes.take(5).toList();
-      print('First 5 pixel values: $firstPixels');
+      debugPrint('First 5 pixel values: $firstPixels');
     }
     
     return ImageData(bytes, grayImage.width, grayImage.height);
   }
+
+  /// Convert Flutter Image to Uint8List (PNG format)
+  static Future<Uint8List> imageToBytes(ui.Image image) async {
+    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+    return byteData!.buffer.asUint8List();
+  }
+
+  /// Convert Uint8List to Flutter Image
+  static Future<ui.Image> bytesToImage(Uint8List bytes) async {
+    final codec = await ui.instantiateImageCodec(bytes);
+    final frame = await codec.getNextFrame();
+    return frame.image;
+  }
+
+  /// Convert YUV420 to RGB
+  /// This is a simplified conversion - production code should use optimized libraries
+  static Uint8List yuv420ToRgb(
+    Uint8List yPlane,
+    Uint8List uPlane,
+    Uint8List vPlane,
+    int width,
+    int height,
+  ) {
+    final rgb = Uint8List(width * height * 3);
+    int rgbIndex = 0;
+
+    for (int y = 0; y < height; y++) {
+      for (int x = 0; x < width; x++) {
+        final yIndex = y * width + x;
+        final uvIndex = (y ~/ 2) * (width ~/ 2) + (x ~/ 2);
+
+        if (yIndex >= yPlane.length || uvIndex >= uPlane.length || uvIndex >= vPlane.length) {
+          debugPrint('Index out of bounds in YUV conversion');
+          continue;
+        }
+
+        final yValue = yPlane[yIndex];
+        final uValue = uPlane[uvIndex];
+        final vValue = vPlane[uvIndex];
+
+        // YUV to RGB conversion
+        final c = yValue - 16;
+        final d = uValue - 128;
+        final e = vValue - 128;
+
+        debugPrint('YUV values: Y=$yValue, U=$uValue, V=$vValue');
+
+        final r = ((298 * c + 409 * e + 128) >> 8).clamp(0, 255);
+        final g = ((298 * c - 100 * d - 208 * e + 128) >> 8).clamp(0, 255);
+        final b = ((298 * c + 516 * d + 128) >> 8).clamp(0, 255);
+
+        rgb[rgbIndex++] = r;
+        rgb[rgbIndex++] = g;
+        rgb[rgbIndex++] = b;
+
+        debugPrint('RGB values: R=$r, G=$g, B=$b');
+      }
+    }
+
+    return rgb;
+  }
+
+  /// Enhanced YUV420 to RGB conversion with proper stride handling
+  static Uint8List yuv420ToRgbEnhanced(
+    Uint8List yPlane,
+    Uint8List uPlane,
+    Uint8List vPlane,
+    int width,
+    int height,
+    int uvRowStride,
+    int uvPixelStride,
+  ) {
+    final rgb = Uint8List(width * height * 3);
+    int rgbIndex = 0;
+
+    debugPrint('YUV420 conversion: ${width}x$height, uvRowStride=$uvRowStride, uvPixelStride=$uvPixelStride');
+
+    for (int y = 0; y < height; y++) {
+      for (int x = 0; x < width; x++) {
+        final yIndex = y * width + x;
+        
+        // Calculate UV indices with stride
+        final uvY = y ~/ 2;
+        final uvX = x ~/ 2;
+        final uIndex = uvY * uvRowStride + uvX * uvPixelStride;
+        final vIndex = uvY * uvRowStride + uvX * uvPixelStride;
+
+        if (yIndex >= yPlane.length || uIndex >= uPlane.length || vIndex >= vPlane.length) {
+          if (kDebugMode) {
+            debugPrint('Index out of bounds: yIndex=$yIndex (max=${yPlane.length}), uIndex=$uIndex (max=${uPlane.length}), vIndex=$vIndex (max=${vPlane.length})');
+          }
+          // Use safe fallback values
+          rgb[rgbIndex++] = 128; // R
+          rgb[rgbIndex++] = 128; // G
+          rgb[rgbIndex++] = 128; // B
+          continue;
+        }
+
+        final yValue = yPlane[yIndex];
+        final uValue = uPlane[uIndex];
+        final vValue = vPlane[vIndex];
+
+        // YUV to RGB conversion (ITU-R BT.601)
+        final c = yValue - 16;
+        final d = uValue - 128;
+        final e = vValue - 128;
+
+        final r = ((298 * c + 409 * e + 128) >> 8).clamp(0, 255);
+        final g = ((298 * c - 100 * d - 208 * e + 128) >> 8).clamp(0, 255);
+        final b = ((298 * c + 516 * d + 128) >> 8).clamp(0, 255);
+
+        rgb[rgbIndex++] = r;
+        rgb[rgbIndex++] = g;
+        rgb[rgbIndex++] = b;
+      }
+    }
+
+    return rgb;
+  }
+
+  /// Convert RGB bytes to PNG
+  static Uint8List rgbToPng(Uint8List rgbBytes, int width, int height) {
+    final image = img.Image.fromBytes(
+      width: width,
+      height: height,
+      bytes: rgbBytes.buffer,
+      numChannels: 3,
+    );
+    return Uint8List.fromList(img.encodePng(image));
+  }
+
+  /// Resize image maintaining aspect ratio
+  static Uint8List resizeImage(
+    Uint8List imageBytes,
+    int targetWidth,
+    int targetHeight,
+  ) {
+    try {
+      final image = img.decodeImage(imageBytes);
+      if (image == null) {
+        throw Exception('Failed to decode image');
+      }
+
+      final resized = img.copyResize(
+        image,
+        width: targetWidth,
+        height: targetHeight,
+        interpolation: img.Interpolation.linear,
+      );
+
+      return Uint8List.fromList(img.encodePng(resized));
+    } catch (e) {
+      debugPrint('Error resizing image: $e');
+      return imageBytes; // Return original on error
+    }
+  }
+
+  /// Enhance image for better barcode detection
+  static Uint8List enhanceForBarcode(Uint8List imageBytes) {
+    try {
+      final image = img.decodeImage(imageBytes);
+      if (image == null) {
+        throw Exception('Failed to decode image');
+      }
+
+      // Apply enhancements
+      var enhanced = img.contrast(image, contrast: 1.2);
+      enhanced = img.adjustColor(enhanced, brightness: 1.1);
+      
+      // Convert to grayscale for better barcode detection
+      enhanced = img.grayscale(enhanced);
+
+      return Uint8List.fromList(img.encodePng(enhanced));
+    } catch (e) {
+      debugPrint('Error enhancing image: $e');
+      return imageBytes; // Return original on error
+    }
+  }
+
+  /// Check if image format is supported
+  static bool isSupportedFormat(String? mimeType) {
+    if (mimeType == null) return false;
+    
+    const supportedFormats = [
+      'image/jpeg',
+      'image/jpg', 
+      'image/png',
+      'image/webp',
+    ];
+    
+    return supportedFormats.contains(mimeType.toLowerCase());
+  }
+
+
 }
 
 class ImageData {

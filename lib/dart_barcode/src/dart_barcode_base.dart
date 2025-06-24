@@ -38,101 +38,81 @@ DynamicLibrary _loadNativeLibrary() {
 
 final DynamicLibrary _lib = _loadNativeLibrary();
 
-/// Enum for image format, mirroring the Rust implementation
+/// Supported image formats for Rust processing
 enum RustImageFormat {
-  Png,
-  Yuv,
-  Bgra8888,
-  Jpeg,
-  Yuv420,
+  png,
+  yuv,
+  bgra8888,
+  jpeg,
+  yuv420,
 }
 
-// FFI signature for process_image
+/// FFI signature for process_image
 typedef _ProcessImageNative = Pointer<Char> Function(
-    Int32 format,
+    Int32 imageFormat,
     Pointer<Uint8> data,
-    UintPtr len,
+    IntPtr len,
     Uint32 width,
     Uint32 height,
-    Uint32 bytes_per_row,
-    Bool use_super_resolution);
+    Uint32 bytesPerRow,
+    Bool useSuperResolution);
 
 typedef _ProcessImage = Pointer<Char> Function(
-    int format,
+    int imageFormat,
     Pointer<Uint8> data,
     int len,
     int width,
     int height,
-    int bytes_per_row,
-    bool use_super_resolution);
+    int bytesPerRow,
+    bool useSuperResolution);
 
 final _processImage =
     _lib.lookupFunction<_ProcessImageNative, _ProcessImage>('process_image');
 
+/// FFI signature for process_yuv420_image
+typedef _ProcessYuv420ImageNative = Pointer<Char> Function(
+  Pointer<Uint8> yData,
+  IntPtr yLen,
+  Pointer<Uint8> uData,
+  IntPtr uLen,
+  Pointer<Uint8> vData,
+  IntPtr vLen,
+  Uint32 width,
+  Uint32 height,
+  Uint32 uvRowStride,
+  Uint32 uvPixelStride,
+  Bool useSuperResolution,
+);
+typedef _ProcessYuv420Image = Pointer<Char> Function(
+  Pointer<Uint8> yData,
+  int yLen,
+  Pointer<Uint8> uData,
+  int uLen,
+  Pointer<Uint8> vData,
+  int vLen,
+  int width,
+  int height,
+  int uvRowStride,
+  int uvPixelStride,
+  bool useSuperResolution,
+);
 
-// FFI signature for free_rust_string
-typedef _FreeRustStringNative = Void Function(Pointer<Char>);
-typedef _FreeRustString = void Function(Pointer<Char>);
+final _processYuv420Image =
+    _lib.lookupFunction<_ProcessYuv420ImageNative, _ProcessYuv420Image>(
+        'process_yuv420_image');
 
-final _freeRustString =
-    _lib.lookupFunction<_FreeRustStringNative, _FreeRustString>('free_rust_string');
-
-// FFI signature for sdk_init
-typedef _SdkInitNative = Int32 Function(Pointer<Char> model_path);
-typedef _SdkInit = int Function(Pointer<Char> model_path);
+/// FFI signature for sdk_init
+typedef _SdkInitNative = Int32 Function(Pointer<Char> modelPath);
+typedef _SdkInit = int Function(Pointer<Char> modelPath);
 
 final _sdkInit = _lib.lookupFunction<_SdkInitNative, _SdkInit>('sdk_init');
 
-// FFI signature for process_yuv420_image
-typedef _ProcessYuv420ImageNative = Pointer<Char> Function(
-    Pointer<Uint8> y_data,
-    UintPtr y_len,
-    Pointer<Uint8> u_data,
-    UintPtr u_len,
-    Pointer<Uint8> v_data,
-    UintPtr v_len,
-    Uint32 width,
-    Uint32 height,
-    Uint32 uv_row_stride,
-    Uint32 uv_pixel_stride,
-    Bool use_super_resolution);
+/// FFI signature for free_rust_string
+typedef _FreeRustStringNative = Void Function(Pointer<Char> ptr);
+typedef _FreeRustString = void Function(Pointer<Char> ptr);
 
-typedef _ProcessYuv420Image = Pointer<Char> Function(
-    Pointer<Uint8> y_data,
-    int y_len,
-    Pointer<Uint8> u_data,
-    int u_len,
-    Pointer<Uint8> v_data,
-    int v_len,
-    int width,
-    int height,
-    int uv_row_stride,
-    int uv_pixel_stride,
-    bool use_super_resolution);
-
-final _processYuv420Image =
-    _lib.lookupFunction<_ProcessYuv420ImageNative, _ProcessYuv420Image>('process_yuv420_image');
-
-// FFI signature for fetch_product_info_c
-typedef _FetchProductInfoNative = Pointer<Char> Function(Pointer<Char> barcode);
-typedef _FetchProductInfo = Pointer<Char> Function(Pointer<Char> barcode);
-
-// final _fetchProductInfo =
-//     _lib.lookupFunction<_FetchProductInfoNative, _FetchProductInfo>('fetch_product_info_c');
-
-// FFI signature for free_product_info_string
-typedef _FreeProductInfoStringNative = Void Function(Pointer<Char>);
-typedef _FreeProductInfoString = void Function(Pointer<Char>);
-
-// final _freeProductInfoString =
-//     _lib.lookupFunction<_FreeProductInfoStringNative, _FreeProductInfoString>('free_product_info_string');
-
-// FFI signature for normalize_barcode_c
-typedef _NormalizeBarcodeNative = Pointer<Char> Function(Pointer<Char> barcode);
-typedef _NormalizeBarcode = Pointer<Char> Function(Pointer<Char> barcode);
-
-// final _normalizeBarcode =
-//     _lib.lookupFunction<_NormalizeBarcodeNative, _NormalizeBarcode>('normalize_barcode_c');
+final _freeRustString =
+    _lib.lookupFunction<_FreeRustStringNative, _FreeRustString>('free_rust_string');
 
 /// Represents product information from OpenFoodFacts
 class ProductInfo {
@@ -217,7 +197,7 @@ Future<String> normalizeBarcode(String barcode) async {
 /// Fetches product information from OpenFoodFacts API
 Future<ProductInfo> fetchProductInfo(String barcode) async {
   // Temporarily disabled - OpenFoodFacts integration not available
-  return ProductInfo(error: 'OpenFoodFacts integration temporarily disabled');
+  return const ProductInfo(error: 'OpenFoodFacts integration temporarily disabled');
   
   /*
   final barcodePtr = barcode.toNativeUtf8();
@@ -403,18 +383,19 @@ Future<List<BarcodeResult>> processYuv420Image({
   Pointer<Char> resultPtr = nullptr;
   try {
     resultPtr = _processYuv420Image(
-        pYPlane,
-        yPlane.length,
-        pUPlane,
-        uPlane.length,
-        pVPlane,
-        vPlane.length,
-        width,
-        height,
-        uvRowStride,
-        uvPixelStride,
-        useSuperResolution);
-        
+      pYPlane,
+      yPlane.length,
+      pUPlane,
+      uPlane.length,
+      pVPlane,
+      vPlane.length,
+      width,
+      height,
+      uvRowStride,
+      uvPixelStride,
+      useSuperResolution,
+    );
+    
     if (resultPtr == nullptr) {
       throw Exception('Rust process_yuv420_image function returned a null pointer.');
     }
