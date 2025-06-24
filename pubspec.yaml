@@ -1,6 +1,6 @@
 name: weebi_barcode_scanner
 description: "A comprehensive barcode scanner package with built-in camera support and cross-platform compatibility. Features point-of-sale optimizations, configurable scanning modes, and OpenFoodFacts integration."
-version: 0.2.1
+version: 0.3.0
 homepage: https://github.com/weebi-com/weebi_barcode_scanner
 repository: https://github.com/weebi-com/weebi_barcode_scanner_package
 issue_tracker: https://github.com/weebi-com/weebi_barcode_scanner_package/issues
@@ -26,7 +26,12 @@ dependencies:
   
   # FFI for native library integration
   ffi: ^2.0.1
-  openfoodfacts: ^3.23.0
+  
+  # OpenFoodFacts integration via separate package
+  weebi_openfoodfacts_service:
+    git:
+      url: https://github.com/weebi-com/weebi_openfoodfacts.git
+      ref: main
 
 dev_dependencies:
   flutter_test:

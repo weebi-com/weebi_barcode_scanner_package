@@ -16,7 +16,10 @@ dependencies:
   weebi_barcode_scanner:
     path: ../
   permission_handler: ^11.0.0
-  openfoodfacts: ^3.23.0
+  weebi_openfoodfacts_service:
+    git:
+      url: https://github.com/weebi-com/weebi_openfoodfacts.git
+      ref: main
 
 dev_dependencies:
   flutter_test:

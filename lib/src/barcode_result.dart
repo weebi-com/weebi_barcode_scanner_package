@@ -1,5 +1,5 @@
 import '../dart_barcode/dart_barcode.dart' as dart_barcode;
-import 'package:openfoodfacts/openfoodfacts.dart' as off;
+import 'package:weebi_openfoodfacts_service/weebi_openfoodfacts_service.dart';
 
 /// Represents a barcode scanning result
 class BarcodeResult {
@@ -22,25 +22,25 @@ class BarcodeResult {
   final Map<String, int>? location;
   
   /// OpenFoodFacts product information (if available)
-  final off.Product? product;
+  final WeebiProduct? product;
   
   /// Whether product information was found
   bool get hasProductInfo => product != null;
   
   /// Nutri-Score (A, B, C, D, E)
-  String? get nutriScore => product?.nutriscore;
+  String? get nutriScore => product?.nutriScore;
   
   /// NOVA group (1-4, food processing level)
   int? get novaGroup => product?.novaGroup;
   
   /// List of allergens
-  List<String> get allergens => product?.allergens?.names ?? [];
+  List<String> get allergens => product?.allergens ?? [];
   
   /// Main product image URL
-  String? get imageUrl => product?.imageFrontUrl;
+  String? get imageUrl => product?.imageUrl;
   
   /// Ingredients text
-  String? get ingredients => product?.ingredientsText;
+  String? get ingredients => product?.ingredients;
   
   const BarcodeResult({
     required this.text,
@@ -73,7 +73,7 @@ class BarcodeResult {
     String? productBrand,
     double? confidence,
     Map<String, int>? location,
-    off.Product? product,
+    WeebiProduct? product,
   }) {
     return BarcodeResult(
       text: text ?? this.text,

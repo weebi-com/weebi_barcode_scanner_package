@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:weebi_barcode_scanner/weebi_barcode_scanner.dart';
-import 'package:openfoodfacts/openfoodfacts.dart' as off;
+import 'package:weebi_openfoodfacts_service/weebi_openfoodfacts_service.dart';
 
 void main() {
   runApp(const MyApp());
@@ -34,16 +34,22 @@ class _ScannerScreenState extends State<ScannerScreen> {
   ScannerConfig _currentConfig = ScannerConfig.continuous();
   final List<BarcodeResult> _scanHistory = [];
   BarcodeResult? _lastScanned;
-  off.Product? _currentProduct;
+  WeebiProduct? _currentProduct;
   bool _isLoadingProduct = false;
 
   @override
   void initState() {
     super.initState();
-    // Initialize OpenFoodFacts
-    OpenFoodFactsService.initialize(
+    _initializeOpenFoodFacts();
+  }
+
+  Future<void> _initializeOpenFoodFacts() async {
+    // Initialize OpenFoodFacts service
+    await WeebiOpenFoodFactsService.initialize(
       appName: 'Weebi Barcode Scanner Demo',
       appUrl: 'https://github.com/weebi-com/weebi_barcode_scanner',
+      preferredLanguages: [WeebiLanguage.english, WeebiLanguage.french],
+      cacheConfig: CacheConfig.production,
     );
   }
 
@@ -60,14 +66,14 @@ class _ScannerScreenState extends State<ScannerScreen> {
     HapticFeedback.lightImpact();
 
     // Look up product information if it's likely a food product
-    if (OpenFoodFactsService.isLikelyFoodProduct(result.text)) {
+    if (WeebiOpenFoodFactsService.isLikelyFoodProduct(result.text)) {
       setState(() {
         _isLoadingProduct = true;
         _currentProduct = null;
       });
 
       try {
-        final product = await OpenFoodFactsService.getProduct(result.text);
+        final product = await WeebiOpenFoodFactsService.getProduct(result.text);
         setState(() {
           _currentProduct = product;
           _isLoadingProduct = false;
@@ -307,9 +313,9 @@ class _ScannerScreenState extends State<ScannerScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Product Name & Brand
-          if (product.productName != null) ...[
+          if (product.name != null) ...[
             Text(
-              product.productName!,
+              product.name!,
               style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -317,9 +323,9 @@ class _ScannerScreenState extends State<ScannerScreen> {
             ),
             const SizedBox(height: 4),
           ],
-          if (product.brands != null) ...[
+          if (product.brand != null) ...[
             Text(
-              product.brands!,
+              product.brand!,
               style: TextStyle(
                 fontSize: 14,
                 color: Colors.grey.shade600,
@@ -329,11 +335,11 @@ class _ScannerScreenState extends State<ScannerScreen> {
           ],
           
           // Nutri-Score
-          if (product.nutriscore != null) ...[
+          if (product.nutriScore != null) ...[
             _buildInfoCard(
               'Nutri-Score',
-              product.nutriscore!.toUpperCase(),
-              OpenFoodFactsService.getNutriScoreColor(product.nutriscore),
+              product.nutriScore!.toUpperCase(),
+              NutritionHelper.getNutriScoreColor(product.nutriScore),
             ),
             const SizedBox(height: 12),
           ],
@@ -343,14 +349,14 @@ class _ScannerScreenState extends State<ScannerScreen> {
             _buildInfoCard(
               'NOVA Group',
               'Group ${product.novaGroup}',
-              _getNovaColor(product.novaGroup!),
-              subtitle: OpenFoodFactsService.getNovaGroupDescription(product.novaGroup),
+              NutritionHelper.getNovaGroupColor(product.novaGroup),
+              subtitle: NutritionHelper.getNovaGroupDescription(product.novaGroup),
             ),
             const SizedBox(height: 12),
           ],
           
           // Allergens
-          if (product.allergens?.names.isNotEmpty == true) ...[
+          if (product.allergens.isNotEmpty) ...[
             const Text(
               'Allergens',
               style: TextStyle(fontWeight: FontWeight.bold),
@@ -358,7 +364,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
             const SizedBox(height: 4),
             Wrap(
               spacing: 4,
-              children: product.allergens!.names.map((allergen) {
+              children: product.allergens.map((allergen) {
                 return Chip(
                   label: Text(
                     allergen,
@@ -372,14 +378,14 @@ class _ScannerScreenState extends State<ScannerScreen> {
           ],
           
           // Ingredients
-          if (product.ingredientsText != null) ...[
+          if (product.ingredients != null) ...[
             const Text(
               'Ingredients',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 4),
             Text(
-              product.ingredientsText!,
+              product.ingredients!,
               style: const TextStyle(fontSize: 12),
             ),
           ],
@@ -442,20 +448,5 @@ class _ScannerScreenState extends State<ScannerScreen> {
         ],
       ),
     );
-  }
-
-  Color _getNovaColor(int novaGroup) {
-    switch (novaGroup) {
-      case 1:
-        return Colors.green;
-      case 2:
-        return Colors.yellow.shade700;
-      case 3:
-        return Colors.orange;
-      case 4:
-        return Colors.red;
-      default:
-        return Colors.grey;
-    }
   }
 } 
