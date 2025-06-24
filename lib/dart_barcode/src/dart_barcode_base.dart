@@ -117,22 +117,22 @@ final _processYuv420Image =
 typedef _FetchProductInfoNative = Pointer<Char> Function(Pointer<Char> barcode);
 typedef _FetchProductInfo = Pointer<Char> Function(Pointer<Char> barcode);
 
-final _fetchProductInfo =
-    _lib.lookupFunction<_FetchProductInfoNative, _FetchProductInfo>('fetch_product_info_c');
+// final _fetchProductInfo =
+//     _lib.lookupFunction<_FetchProductInfoNative, _FetchProductInfo>('fetch_product_info_c');
 
 // FFI signature for free_product_info_string
 typedef _FreeProductInfoStringNative = Void Function(Pointer<Char>);
 typedef _FreeProductInfoString = void Function(Pointer<Char>);
 
-final _freeProductInfoString =
-    _lib.lookupFunction<_FreeProductInfoStringNative, _FreeProductInfoString>('free_product_info_string');
+// final _freeProductInfoString =
+//     _lib.lookupFunction<_FreeProductInfoStringNative, _FreeProductInfoString>('free_product_info_string');
 
 // FFI signature for normalize_barcode_c
 typedef _NormalizeBarcodeNative = Pointer<Char> Function(Pointer<Char> barcode);
 typedef _NormalizeBarcode = Pointer<Char> Function(Pointer<Char> barcode);
 
-final _normalizeBarcode =
-    _lib.lookupFunction<_NormalizeBarcodeNative, _NormalizeBarcode>('normalize_barcode_c');
+// final _normalizeBarcode =
+//     _lib.lookupFunction<_NormalizeBarcodeNative, _NormalizeBarcode>('normalize_barcode_c');
 
 /// Represents product information from OpenFoodFacts
 class ProductInfo {
@@ -190,6 +190,10 @@ class ProductInfo {
 
 /// Normalizes a barcode according to OpenFoodFacts standards
 Future<String> normalizeBarcode(String barcode) async {
+  // Temporarily disabled - OpenFoodFacts integration not available
+  return barcode; // Return original barcode unchanged
+  
+  /*
   final barcodePtr = barcode.toNativeUtf8();
   Pointer<Char> resultPtr = nullptr;
   
@@ -199,17 +203,23 @@ Future<String> normalizeBarcode(String barcode) async {
       return barcode; // Return original if normalization fails
     }
     
-    return resultPtr.cast<Utf8>().toDartString();
+    final result = resultPtr.cast<Utf8>().toDartString();
+    return result;
   } finally {
     malloc.free(barcodePtr);
     if (resultPtr != nullptr) {
-      _freeRustString(resultPtr);
+      _freeProductInfoString(resultPtr);
     }
   }
+  */
 }
 
 /// Fetches product information from OpenFoodFacts API
 Future<ProductInfo> fetchProductInfo(String barcode) async {
+  // Temporarily disabled - OpenFoodFacts integration not available
+  return ProductInfo(error: 'OpenFoodFacts integration temporarily disabled');
+  
+  /*
   final barcodePtr = barcode.toNativeUtf8();
   Pointer<Char> resultPtr = nullptr;
   
@@ -230,6 +240,7 @@ Future<ProductInfo> fetchProductInfo(String barcode) async {
       _freeProductInfoString(resultPtr);
     }
   }
+  */
 }
 
 /// Represents the raw detection data from the YOLO model
