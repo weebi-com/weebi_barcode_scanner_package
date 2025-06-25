@@ -1,6 +1,6 @@
 name: weebi_barcode_scanner
-description: "A comprehensive barcode scanner package with built-in camera support and cross-platform compatibility. Features point-of-sale optimizations, configurable scanning modes, and OpenFoodFacts integration."
-version: 0.3.0
+description: "Self-contained barcode scanner with real-time detection overlay. Features embedded YOLO detection, cross-platform support (Windows/macOS), point-of-sale optimizations, and OpenFoodFacts integration. No manual setup required."
+version: 0.5.0
 homepage: https://github.com/weebi-com/weebi_barcode_scanner
 repository: https://github.com/weebi-com/weebi_barcode_scanner_package
 issue_tracker: https://github.com/weebi-com/weebi_barcode_scanner_package/issues
@@ -13,6 +13,12 @@ dependencies:
   flutter:
     sdk: flutter
   
+  # Core barcode detection engine
+  weebi_barcode_dart:
+    git:
+      url: https://github.com/weebi-com/weebi_barcode_dart.git
+      ref: master
+  
   # Windows camera support
   camera: ^0.11.1
   camera_windows: ^0.2.6+2
@@ -20,12 +26,7 @@ dependencies:
   
   # File handling
   path: ^1.8.0
-  
-  # Image processing
-  image: ^4.0.17
-  
-  # FFI for native library integration
-  ffi: ^2.0.1
+  path_provider: ^2.0.0
   
   # OpenFoodFacts integration via separate package
   weebi_openfoodfacts_service:

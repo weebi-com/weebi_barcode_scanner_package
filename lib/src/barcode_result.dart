@@ -1,4 +1,3 @@
-import '../dart_barcode/dart_barcode.dart' as dart_barcode;
 import 'package:weebi_openfoodfacts_service/weebi_openfoodfacts_service.dart';
 
 /// Represents a barcode scanning result
@@ -51,19 +50,6 @@ class BarcodeResult {
     this.location,
     this.product,
   });
-  
-  /// Create a BarcodeResult from dart_barcode result
-  factory BarcodeResult.fromDartBarcode(dart_barcode.BarcodeResult result) {
-    return BarcodeResult(
-      text: result.text,
-      format: result.format,
-      productName: null,
-      productBrand: null,
-      confidence: null,
-      location: null,
-      product: null,
-    );
-  }
   
   /// Create a copy with updated fields
   BarcodeResult copyWith({

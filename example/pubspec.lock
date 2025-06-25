@@ -605,13 +605,22 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.1.1"
+  weebi_barcode_dart:
+    dependency: transitive
+    description:
+      path: "."
+      ref: master
+      resolved-ref: "5c6c44bcae7e47753e002be669622f00e774520a"
+      url: "https://github.com/weebi-com/weebi_barcode_dart.git"
+    source: git
+    version: "1.0.0"
   weebi_barcode_scanner:
     dependency: "direct main"
     description:
       path: ".."
       relative: true
     source: path
-    version: "0.3.0"
+    version: "0.5.0"
   weebi_openfoodfacts_service:
     dependency: "direct main"
     description:

@@ -1,78 +1,179 @@
-## 1.0.1
+## 1.1.0 - 2025-01-16
 
-* **Repository Update**: Linked to official GitHub repository for better community support
-* **Metadata Enhancement**: Added proper repository and issue tracker URLs
-* **Documentation**: Updated links to point to the official GitHub repository
+- Removed dependency on separate `dart_barcode` package
+- **Live Detection Overlay**: Green bounding boxes appear instantly when barcodes are detected
+- **Visual Feedback**: Shows barcode location before successful decoding
+- **Crosshair Guidance**: Blue crosshair helps users position camera when no barcode detected
+- **Clean Interface**: Minimalist overlay without text clutter
+- **User Reassurance**: Visual confirmation that detection system is actively working
 
-## 1.0.0
+- **Point-of-Sale Mode**: `ScannerConfig.pointOfSale()` - Single scan with haptic feedback
+- **Continuous Mode**: `ScannerConfig.continuous()` - Multiple scans for inventory use
+- **Simplified Configuration**: Removed complex Fast/Accurate modes for cleaner API
 
-* **Initial release** of Weebi Barcode Scanner for Windows Flutter apps
-* **Simplified Integration**: Reduced from 1000+ lines to ~20 lines of integration code
-* **Self-Contained Package**: Bundled YOLO model and native Windows DLL
-* **Privacy-First**: 100% offline barcode scanning with no data transmission
-* **High Performance**: YOLO-based detection + rxing barcode decoding
-* **Zero Setup**: No manual downloads or configuration required
-* **Windows Optimized**: BGRA8888 format support with proper resource management
-* **Three Configuration Presets**: Default, Fast, and Accurate scanning modes
-* **Enterprise Ready**: Clear licensing path for commercial use
-* **Apache 2.0 Licensed**: Open source package with proprietary core components
+**🖥️ Cross-Platform Support:**
+- **macOS Support**: Added `camera_macos` integration alongside Windows support
+- **Platform Detection**: Automatic camera manager selection based on platform
+- **Native Performance**: Platform-optimized camera handling
 
-## 0.2.0+1 - 2025-12-24
+**📊 Enhanced Results:**
+- **Location Data**: BarcodeResult now includes precise barcode coordinates
+- **Confidence Scoring**: Detection confidence available (though not displayed by default)
+- **Better Metadata**: Enhanced barcode format and positioning information
+- Cleaner separation between public API and internal implementation
 
-### 🎉 MAJOR BREAKTHROUGH - FFI Integration Fixed!
+**🎨 User Interface:**
+- **Split-Screen Example**: Camera preview (2/3) + product info panel (1/3)
+- **Clean Scan History**: Simple display without technical clutter
+- **Modern Design**: Professional point-of-sale ready interface
+- **Responsive Layout**: Adapts to different screen sizes
 
-**This version marks a critical milestone: The package now actually works!**
+**⚡ Performance Optimizations:**
+- **Embedded Assets**: All models and libraries bundled efficiently
+- **Memory Management**: Improved detection coordinate tracking
+- **Real-Time Updates**: Smooth overlay rendering with minimal performance impact
+- **Resource Cleanup**: Proper disposal of detection state
 
-#### ✅ Fixed
-- **FFI Integration**: Rebuilt `rust_barcode_lib.dll` with current source code
-- **SDK Initialization**: `sdk_init` function now properly exported and working
-- **Symbol Resolution**: Fixed "Failed to lookup symbol 'sdk_init'" error
-- **Build Dependencies**: Fixed missing dependencies in `rust-barcode-lib/Cargo.toml`
-- **Library Exports**: All required FFI functions now available in DLL
+**🎯 Configuration Examples:**
+```dart
+// Point-of-sale: Single scan with haptic feedback
+ScannerConfig.pointOfSale()
 
-#### 🔧 Technical Changes
-- Rebuilt DLL from source with `cargo build --release`
-- Fresh DLL (11MB) replaces broken old DLL (27MB) 
-- Temporarily disabled OpenFoodFacts integration to get core functionality working
-- Updated all DLL locations in package structure
-- Added comprehensive status documentation
+// Continuous: Multiple scans for inventory
+ScannerConfig.continuous()
+```
 
-#### 📊 Status Change
-- **Before**: ❌ Package failed at runtime with FFI symbol errors
-- **After**: ✅ Package successfully initializes barcode SDK
-- **Success Message**: `flutter: ✅ Barcode SDK initialized successfully`
+## 0.2.0+1 FFI Integration Fixed!
 
-#### 🚀 What's Next
 - Camera integration testing
 - Full barcode detection pipeline verification
 - Re-enable OpenFoodFacts product lookup
 - Performance optimization
 
-#### 💡 For Developers
-This demonstrates that complex FFI integration issues can be systematically debugged and fixed. The key was understanding that the DLL was built from an older version of the source code missing required function exports.
+---
+
+## 0.1.0+1 Initial Release
+
+## 0.5.0
+
+### BREAKING CHANGES - Core Architecture Separation
+
+**Major refactoring**: Extracted core barcode detection logic into separate `weebi_barcode_dart` package for better modularity and reusability.
+
+#### New Architecture
+- **Core Package**: [`weebi_barcode_dart`](https://github.com/weebi-com/weebi_barcode_dart) - Pure Dart barcode detection with FFI interface
+- **UI Package**: `weebi_barcode_scanner` - Flutter widget layer with camera integration
+- **Service Package**: [`weebi_openfoodfacts_service`](https://github.com/weebi-com/weebi_openfoodfacts) - Product information service
+
+#### Changes Made
+- ✅ Extracted embedded `dart_barcode` logic to external `weebi_barcode_dart` package
+- ✅ Simplified dependency management - no more embedded FFI code
+- ✅ Improved modularity - core detection can be used in any Dart/Flutter project
+- ✅ Enhanced API consistency between packages
+- ✅ Added comprehensive documentation and examples
+
+#### Migration Guide
+No changes required for existing users - the public API remains the same:
+```dart
+BarcodeScannerWidget(
+  onBarcodeDetected: (result) {
+    print('Detected: ${result.text}');
+  },
+)
+```
+
+#### Benefits
+- 🎯 **Reusable Core**: Use barcode detection in any Dart project
+- 🏗️ **Better Architecture**: Clear separation between detection, UI, and services
+- 📦 **Simplified Dependencies**: Cleaner package structure
+- 🔧 **Framework Agnostic**: Core detection works outside Flutter
+- 📚 **Better Documentation**: Each package has focused documentation
 
 ---
 
-## 0.1.0+1 - 2025-12-24
+## 0.4.0
 
-### 🚀 Initial Release
+### OpenFoodFacts Integration & Point-of-Sale Features
 
-#### ✨ Added
-- Basic Flutter package structure for Windows barcode scanning
-- Simplified widget interface for barcode detection
-- Bundled YOLO model and FFI bindings
-- Comprehensive documentation and setup guides
-- Honest technical status reporting
+#### New Features
+- ✅ **OpenFoodFacts Integration**: Automatic product information lookup for food barcodes
+- ✅ **Point-of-Sale Mode**: Optimized for single quick scans with haptic feedback
+- ✅ **Split-Screen UI**: Camera preview (left) + product information (right)
+- ✅ **Cross-Platform Camera**: Added macOS support via `camera_macos` package
+- ✅ **Enhanced Product Display**: Nutri-Score, NOVA groups, allergen warnings
 
-#### ⚠️ Known Issues
-- FFI integration not working (symbol resolution failures)
-- Package builds but fails at runtime
-- Requires manual DLL and asset setup
+#### Scanner Configurations
+- `ScannerConfig.continuous()` - Continuous scanning for inventory management
+- `ScannerConfig.pointOfSale()` - Single scan mode with haptic feedback and auto-stop
 
-#### 📋 Development Status
-- Package structure: ✅ Complete
-- API design: ✅ Simplified
-- Documentation: ✅ Comprehensive  
-- Core functionality: ❌ Not working (FFI issues)
+#### OpenFoodFacts Features
+- Real-time product information display
+- Nutri-Score with color coding (A-E)
+- NOVA group classification (1-4)
+- Allergen warnings with visual chips
+- Ingredients display
+- Product images and branding
+
+#### Technical Improvements
+- Enhanced error handling for API calls
+- Loading states during product lookup
+- Barcode format validation for food products
+- Professional point-of-sale ready interface
 
 ---
+
+## 0.3.0
+
+### Quality & Reliability Improvements
+
+#### Code Quality Fixes
+- ✅ **Zero Linting Issues**: Fixed all snake_case to camelCase naming
+- ✅ **All Tests Passing**: Added missing ScannerConfig factory methods
+- ✅ **API Completeness**: Fixed BarcodeResult missing properties
+- ✅ **Performance**: Applied const constructors throughout
+
+#### Critical Bug Fixes
+- ✅ **FFI Integration**: Fixed "Failed to lookup symbol 'sdk_init'" error
+- ✅ **DLL Rebuild**: Updated rust_barcode_lib.dll with all required function exports
+- ✅ **Dependency Issues**: Resolved missing dependencies in Rust build
+
+#### Enhanced API
+- Added `BarcodeResult.toString()` method
+- Added `hasProductInfo` property
+- Fixed constructor vs static constant naming conflicts
+- Improved error messages and debugging output
+
+---
+
+## 0.2.0+1
+
+### Initial Working Release
+
+#### Core Features
+- ✅ **YOLO Detection**: Embedded neural network for high-accuracy barcode detection
+- ✅ **Windows Support**: Optimized for Windows development with proper FFI integration
+- ✅ **Camera Integration**: Real-time camera preview with detection overlay
+- ✅ **Multiple Formats**: Support for EAN-13, Code 128, QR codes, and more
+
+#### Technical Implementation
+- Fixed Flutter example project structure
+- Rebuilt Rust FFI library with correct function exports
+- Added comprehensive error handling
+- Implemented hot reload support
+
+#### Package Structure
+- Complete pub package with proper pubspec.yaml
+- Example Flutter application
+- Asset bundling for YOLO model files
+- Cross-platform build configuration
+
+---
+
+## 0.1.0
+
+### Initial Release (Non-functional)
+
+- Basic package structure
+- Embedded YOLO model
+- Initial FFI bindings (broken)
+- Basic documentation

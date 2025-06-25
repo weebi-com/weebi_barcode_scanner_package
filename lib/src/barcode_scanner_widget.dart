@@ -1,11 +1,12 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
+import 'package:weebi_barcode_dart/weebi_barcode_dart.dart' as core_barcode;
 
-import '../dart_barcode/dart_barcode.dart' as dart_barcode;
 import 'barcode_result.dart';
 import 'scanner_config.dart';
 import 'platform_camera_manager.dart';
@@ -58,6 +59,10 @@ class _BarcodeScannerWidgetState extends State<BarcodeScannerWidget> {
   bool _isInitialized = false;
   String? _errorMessage;
   bool _isScanning = true;
+  
+  // Detection visualization state
+  Map<String, dynamic>? _latestDetectionCoordinates;
+  DateTime? _lastDetectionTime;
   
   @override
   void initState() {
@@ -117,7 +122,7 @@ class _BarcodeScannerWidgetState extends State<BarcodeScannerWidget> {
       }
       
       // Initialize the SDK with the model path
-      final success = await dart_barcode.initializeBarcodeSDK(modelFile.path);
+      final success = await core_barcode.BarcodeDetector.initialize(modelFile.path);
       
       if (success) {
         debugPrint('✅ Barcode SDK initialized successfully');
@@ -168,27 +173,45 @@ class _BarcodeScannerWidgetState extends State<BarcodeScannerWidget> {
 
   Future<BarcodeResult?> _processImage(Uint8List imageBytes) async {
     try {
-      // Process the image using the dart_barcode SDK
-      final results = await dart_barcode.processImage(
-        format: dart_barcode.RustImageFormat.jpeg,
+      // Process the image using the weebi_barcode_dart SDK
+      final results = await core_barcode.BarcodeDetector.processImage(
+        format: core_barcode.ImageFormat.jpeg,
         bytes: imageBytes,
         useSuperResolution: widget.config.useSuperResolution,
       );
       
       if (results.isNotEmpty) {
-        final result = results.first;
-        return BarcodeResult(
-          text: result.text,
-          format: result.format,
-          productName: null, // TODO: Add product lookup if enabled
-          productBrand: null,
+        final coreResult = results.first;
+        
+        // Convert core result to our widget result format
+        final result = BarcodeResult(
+          text: coreResult.text,
+          format: coreResult.format,
         );
+        
+        // Extract detection coordinates for visualization
+        if (coreResult.bounds != null) {
+          setState(() {
+            _latestDetectionCoordinates = {
+              'left': coreResult.bounds!.left,
+              'top': coreResult.bounds!.top,
+              'right': coreResult.bounds!.right,
+              'bottom': coreResult.bounds!.bottom,
+              'confidence': coreResult.bounds!.confidence,
+              'barcodeType': coreResult.format,
+            };
+            _lastDetectionTime = DateTime.now();
+          });
+          debugPrint('🎯 Detection coordinates: $_latestDetectionCoordinates');
+        }
+        
+        return result;
       }
       
       return null;
     } catch (e) {
       debugPrint('❌ Image processing failed: $e');
-      return null;
+      rethrow;
     }
   }
 
@@ -293,15 +316,11 @@ class _BarcodeScannerWidgetState extends State<BarcodeScannerWidget> {
         // Camera preview
         _cameraManager!.buildPreviewWidget(),
         
-        // Overlay
+        // Detection overlay (shows barcode location from YOLO)
         if (widget.config.showOverlay)
-          Container(
-            decoration: BoxDecoration(
-              border: Border.all(
-                color: widget.config.overlayColor,
-                width: 2.0,
-              ),
-            ),
+          _BarcodeDetectionOverlay(
+            detectionCoordinates: _latestDetectionCoordinates,
+            overlayColor: widget.config.overlayColor,
           ),
         
         // Scanning status indicator
@@ -328,5 +347,101 @@ class _BarcodeScannerWidgetState extends State<BarcodeScannerWidget> {
           ),
       ],
     );
+  }
+}
+
+/// Custom overlay widget that shows barcode detection in real-time
+class _BarcodeDetectionOverlay extends StatelessWidget {
+  final Map<String, dynamic>? detectionCoordinates;
+  final Color overlayColor;
+
+  const _BarcodeDetectionOverlay({
+    this.detectionCoordinates,
+    required this.overlayColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      painter: _DetectionOverlayPainter(
+        detectionCoordinates: detectionCoordinates,
+        overlayColor: overlayColor,
+      ),
+      child: Container(),
+    );
+  }
+}
+
+/// Custom painter for barcode detection overlay
+class _DetectionOverlayPainter extends CustomPainter {
+  final Map<String, dynamic>? detectionCoordinates;
+  final Color overlayColor;
+
+  _DetectionOverlayPainter({
+    this.detectionCoordinates,
+    required this.overlayColor,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (detectionCoordinates != null) {
+      _drawDetectionBox(canvas, size, detectionCoordinates!);
+    } else {
+      _drawCenterCrosshair(canvas, size);
+    }
+  }
+
+  void _drawCenterCrosshair(Canvas canvas, Size size) {
+    final Paint paint = Paint()
+      ..color = overlayColor.withOpacity(0.6)
+      ..strokeWidth = 2.0
+      ..style = PaintingStyle.stroke;
+
+    final double centerX = size.width / 2;
+    final double centerY = size.height / 2;
+    final double crosshairSize = 20.0;
+
+    // Draw crosshair
+    canvas.drawLine(
+      Offset(centerX - crosshairSize, centerY), 
+      Offset(centerX + crosshairSize, centerY), 
+      paint
+    );
+    canvas.drawLine(
+      Offset(centerX, centerY - crosshairSize), 
+      Offset(centerX, centerY + crosshairSize), 
+      paint
+    );
+
+    // Draw center circle
+    canvas.drawCircle(
+      Offset(centerX, centerY),
+      3.0,
+      paint..style = PaintingStyle.fill,
+    );
+  }
+
+  void _drawDetectionBox(Canvas canvas, Size size, Map<String, dynamic> detection) {
+    final Paint paint = Paint()
+      ..color = Colors.green
+      ..strokeWidth = 3.0
+      ..style = PaintingStyle.stroke;
+
+    final double left = detection['left'].toDouble();
+    final double top = detection['top'].toDouble();
+    final double right = detection['right'].toDouble();
+    final double bottom = detection['bottom'].toDouble();
+
+    // Draw bounding rectangle
+    canvas.drawRect(
+      Rect.fromLTRB(left, top, right, bottom),
+      paint
+    );
+  }
+
+  @override
+  bool shouldRepaint(_DetectionOverlayPainter oldDelegate) {
+    return detectionCoordinates != oldDelegate.detectionCoordinates ||
+           overlayColor != oldDelegate.overlayColor;
   }
 } 
