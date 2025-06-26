@@ -1,3 +1,13 @@
+## 1.5.0 - 2025-06-26
+
+- lighter, faster, etc
+
+## 1.4.0 - 2025-06-26
+
+- better example
+- macos
+- bump dart_barcode
+
 ## 1.3.0 - 2025-06-25
 
 - fix example

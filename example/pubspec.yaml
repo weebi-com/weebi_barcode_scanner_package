@@ -35,6 +35,30 @@ dev_dependencies:
   flutter_lints: ^2.0.0
 
 flutter:
+  # The following line ensures that the Material Icons font is
+  # included with your application, so that you can use the icons in
+  # the material Icons class.
   uses-material-design: true
+
+  # Example of proper asset setup for weebi_barcode_scanner package
+  # These assets must be provided by the consuming application
   assets:
-    - assets/ 
+    # REQUIRED: YOLO barcode detection model (11.68 MB)
+    # Download from: https://huggingface.co/weebi/weebi_barcode_detector/blob/main/best.rten
+    # License: AGPL-3.0 (requires attribution)
+    - assets/best.rten
+    
+    # PLATFORM-SPECIFIC: Include only what you need
+    # Windows (10.87 MB)
+    - windows/rust_barcode_lib.dll
+    
+    # macOS (22 MB universal binary)  
+    - macos/Frameworks/
+    
+    # Android (per architecture)
+    # - android/jniLibs/arm64-v8a/librust_barcode_lib.so
+    # - android/jniLibs/armeabi-v7a/librust_barcode_lib.so
+    # - android/jniLibs/x86_64/librust_barcode_lib.so
+    
+    # iOS
+    # - ios/Frameworks/librust_barcode_lib.dylib 
