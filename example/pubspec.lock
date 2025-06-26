@@ -513,19 +513,19 @@ packages:
     dependency: transitive
     description:
       name: weebi_barcode_dart
-      sha256: "3d743e23118b0fc880cd9661ed33385307087200d1c5384356d63cd8ba575bc8"
+      sha256: "11d312c58ba9f77ac35cb5460fc686eafde7f97eeb7c17b5d59c8ab42bb4f895"
       url: "https://pub.dev"
     source: hosted
-    version: "1.0.1"
+    version: "1.0.2"
   weebi_barcode_scanner:
     dependency: "direct main"
     description:
       path: ".."
       relative: true
     source: path
-    version: "1.4.0"
+    version: "1.6.0"
   weebi_openfoodfacts_service:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: weebi_openfoodfacts_service
       sha256: f58d053a7937a110b550368b5180d009485f7791634f20858c2559929f939243

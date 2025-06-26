@@ -3,7 +3,7 @@ description: "Example app demonstrating weebi_barcode_scanner_package"
 
 publish_to: 'none'
 
-version: 1.0.0+1
+version: 1.6.0+1
 
 environment:
   sdk: '>=3.1.5 <4.0.0'
@@ -18,8 +18,9 @@ dependencies:
   # Scanner package - contains all camera dependencies
   weebi_barcode_scanner:
     path: ../
-    
-  # Camera and image processing - EXACT working versions from dart_barcode_old
+  # OpenFoodFacts integration via separate package
+  weebi_openfoodfacts_service: ^1.1.0    
+  # Camera and image processing 
   camera: 0.10.5+5
   camera_windows: 0.2.6+2
   image: ^4.0.17
@@ -50,7 +51,7 @@ flutter:
     
     # PLATFORM-SPECIFIC: Include only what you need
     # Windows (10.87 MB)
-    - windows/rust_barcode_lib.dll
+    # - windows/rust_barcode_lib.dll  # Not needed - dart_barcode handles native loading
     
     # macOS (22 MB universal binary)  
     - macos/Frameworks/

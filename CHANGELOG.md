@@ -1,3 +1,7 @@
+## 1.6.0
+
+- simple single scan example
+
 ## 1.5.0 - 2025-06-26
 
 - lighter, faster, etc

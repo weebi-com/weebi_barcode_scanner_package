@@ -6,6 +6,8 @@ import 'package:camera/camera.dart';
 import 'package:weebi_barcode_scanner/weebi_barcode_scanner.dart';
 import 'package:weebi_openfoodfacts_service/weebi_openfoodfacts_service.dart';
 
+import 'simple_scanner_demo.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
@@ -156,6 +158,18 @@ class _HorizontalScannerScreenState extends State<HorizontalScannerScreen> {
             ),
           ),
         ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => const SimpleScannerDemo(),
+            ),
+          );
+        },
+        icon: const Icon(Icons.qr_code_scanner),
+        label: const Text('Simple Scanner'),
+        tooltip: 'Open simple barcode_scan2-style scanner',
       ),
     );
   }
