@@ -34,7 +34,6 @@ class WeebiBarcodeScanner {
   /// }
   /// ```
   static Future<WeebiBarcodeResult> scan({
-    BuildContext? context,
     ScannerConfig? config,
     String? title,
     String? subtitle,
@@ -42,10 +41,10 @@ class WeebiBarcodeScanner {
     bool showGalleryButton = false,
   }) async {
     try {
-      // Use provided context or try to get current context
-      final navigatorContext = context ?? _getCurrentContext();
+      // Get current context automatically
+      final navigatorContext = _getCurrentContext();
       if (navigatorContext == null) {
-        return WeebiBarcodeResult.error('No valid context found. Please provide a BuildContext or ensure you have a MaterialApp in your widget tree.');
+        return WeebiBarcodeResult.error('No valid context found. Ensure you have a MaterialApp in your widget tree and call scan() from within a widget.');
       }
 
       // Use default config if none provided

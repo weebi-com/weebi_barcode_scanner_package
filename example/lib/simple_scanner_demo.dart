@@ -94,7 +94,6 @@ class _SimpleScannerDemoState extends State<SimpleScannerDemo> {
     try {
       // This is the elegant API - just like barcode_scan2!
       final result = await WeebiBarcodeScanner.scan(
-        context: context,
         title: 'Scan Product Barcode',
         subtitle: 'Point your camera at a barcode to scan it',
       );

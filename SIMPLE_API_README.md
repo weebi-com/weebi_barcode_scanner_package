@@ -34,7 +34,6 @@ if (result.isSuccess) {
 
 ```dart
 static Future<WeebiBarcodeResult> scan({
-  BuildContext? context,           // Optional: provide context
   ScannerConfig? config,          // Optional: scanner configuration  
   String? title,                  // Optional: custom title
   String? subtitle,               // Optional: instruction text
@@ -71,7 +70,6 @@ final result = await WeebiBarcodeScanner.scan();
 
 ```dart
 final result = await WeebiBarcodeScanner.scan(
-  context: context,
   title: 'Scan Product Barcode',
   subtitle: 'Point your camera at a product barcode',
   showFlashToggle: true,
