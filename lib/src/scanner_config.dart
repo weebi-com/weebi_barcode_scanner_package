@@ -17,6 +17,9 @@ class ScannerConfig {
   /// Whether to show the scanning overlay rectangle
   final bool showOverlay;
   
+  /// Whether to show the status overlay with scanning information
+  final bool showStatusOverlay;
+  
   /// Custom overlay color (default: green)
   final Color overlayColor;
   
@@ -52,6 +55,7 @@ class ScannerConfig {
     this.useSuperResolution = true,
     this.enableProductLookup = true,
     this.showOverlay = true,
+    this.showStatusOverlay = true,
     this.overlayColor = Colors.green,
     this.scanInterval = const Duration(seconds: 1),
     this.timeout = const Duration(seconds: 15),
@@ -69,6 +73,7 @@ class ScannerConfig {
     this.useSuperResolution = true,
     this.enableProductLookup = true,
     this.showOverlay = true,
+    this.showStatusOverlay = true,
     this.overlayColor = Colors.blue,
     this.scanInterval = const Duration(seconds: 1),
     this.timeout = const Duration(seconds: 15),
@@ -86,6 +91,7 @@ class ScannerConfig {
     this.useSuperResolution = true,
     this.enableProductLookup = true, // Keep enabled for product info display
     this.showOverlay = true,
+    this.showStatusOverlay = false, // Hide status overlay for cleaner POS experience
     this.overlayColor = Colors.green,
     this.scanInterval = const Duration(milliseconds: 500), // Faster scanning
     this.timeout = const Duration(seconds: 10),

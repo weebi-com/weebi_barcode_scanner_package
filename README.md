@@ -1,8 +1,8 @@
 # Weebi Barcode Scanner
 
-A Flutter package for barcode and QR code scanning on Windows and macOS, powered by YOLO object detection and ZXing decoding. **Self-contained and ready for pub.dev publication.**
+A Flutter package for barcode and QR code scanning on Windows and macOS powered by YOLO object detection and ZXing decoding. **Self-contained and ready for pub.dev publication.**
 
-## ✨ Features
+## Features
 
 - **Cross-Platform**: Windows and macOS support
 - **AI-Powered Detection**: YOLO model for accurate barcode localization
@@ -28,7 +28,6 @@ flutter pub get
 ```
 
 ## Quick Start
-
 ### Basic Usage
 
 ```dart
@@ -205,13 +204,6 @@ BarcodeScannerWidget(
 - Native libraries included in package
 - No additional setup required
 
-### macOS  
-- Camera permissions handled automatically
-- Native libraries included in package
-- May require camera access approval on first run
-
-## ⚡ Architecture
-
 ### Self-Contained Design
 - **Embedded AI Model**: YOLO detection model included
 - **Native Libraries**: Rust FFI libraries bundled
@@ -225,7 +217,6 @@ BarcodeScannerWidget(
 - **Background Processing**: Non-blocking detection using isolates
 
 ## 🚨 Troubleshooting
-
 ### Common Issues
 
 1. **Camera not working**

@@ -1,28 +1,10 @@
 # REALISTIC Barcode Scanner Setup Guide
 
-## ⚠️ REALITY CHECK
 
-**This is NOT a simple "add dependency and widget" solution.** Despite our best efforts to simplify, barcode scanning requires:
-
-- **38MB of assets** (12MB model + 26MB DLL)
-- **Manual file copying** (can't be automated)
-- **Platform-specific setup** (Windows only)
-- **Complex dependencies** (FFI, camera, permissions)
-- **Native library management** (DLL placement)
-
-**Estimated setup time: 30-60 minutes** (not 5 minutes)
-
-## 🔥 Why This Is Complex
-
-The barcode scanning pipeline involves:
-1. **YOLO v8 Object Detection** (requires 12MB model)
-2. **Rust FFI bindings** (requires 26MB DLL)
-3. **Camera management** (requires permissions)
-4. **ZXing decoding** (built into DLL)
-5. **Super resolution** (optional enhancement)
-6. **OpenFoodFacts lookup** (optional product info)
-
-**Each component has setup requirements.**
+Don't explicitly declare Windows-specific plugins like path_provider_windows and permission_handler_windows in pubspec.yaml
+Let Flutter automatically include them as transitive dependencies through the main plugins
+Only explicitly declare camera_windows because the main camera plugin doesn't automatically include Windows support
+The working configuration is:
 
 ## 📋 ACTUAL Setup Steps
 

@@ -1,15 +1,16 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:camera/camera.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'package:weebi_barcode_dart/weebi_barcode_dart.dart' as core_barcode;
 
 import 'barcode_result.dart';
 import 'scanner_config.dart';
-import 'platform_camera_manager.dart';
+import 'simple_camera_manager.dart';
 
 /// Simple barcode scanner widget for Windows
 /// 
@@ -53,347 +54,576 @@ class BarcodeScannerWidget extends StatefulWidget {
   State<BarcodeScannerWidget> createState() => _BarcodeScannerWidgetState();
 }
 
-class _BarcodeScannerWidgetState extends State<BarcodeScannerWidget> {
-  PlatformCameraManager? _cameraManager;
+class _BarcodeScannerWidgetState extends State<BarcodeScannerWidget> with WidgetsBindingObserver {
+  final SimpleCameraManager _cameraManager = SimpleCameraManager();
+  bool _detectorInitialized = false;
+  BarcodeResult? _latestBarcode;
+  DateTime? _lastDetectionTime;
+  bool _isScanning = false;
+  bool _isInitializing = false;
+  String? _error;
   Timer? _scanTimer;
-  bool _isInitialized = false;
-  String? _errorMessage;
-  bool _isScanning = true;
+  bool _isDisposing = false;
   
   // Detection visualization state
   Map<String, dynamic>? _latestDetectionCoordinates;
-  DateTime? _lastDetectionTime;
   
   @override
   void initState() {
     super.initState();
-    _initializeCamera();
+    WidgetsBinding.instance.addObserver(this);
+    _initializeScanner();
+  }
+
+  @override
+  void reassemble() {
+    super.reassemble();
+    // Handle hot reload - reinitialize the scanner
+    if (kDebugMode) {
+      debugPrint('Hot reload detected - reinitializing scanner');
+      _reinitializeForHotReload();
+    }
+  }
+
+  @override
+  void didUpdateWidget(BarcodeScannerWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // If the config changed significantly, reinitialize
+    if (oldWidget.config.modelPath != widget.config.modelPath) {
+      _reinitializeScanner();
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.paused) {
+      _stopScanning();
+    } else if (state == AppLifecycleState.resumed && !_isDisposing) {
+      // Give a longer delay for Windows after resuming
+      final delay = _cameraManager.isWindows 
+          ? const Duration(milliseconds: 1000)
+          : const Duration(milliseconds: 500);
+      
+      Future.delayed(delay, () {
+        if (!_isDisposing) {
+          _initializeScanner();
+        }
+      });
+    }
   }
 
   @override
   void dispose() {
+    _isDisposing = true;
+    WidgetsBinding.instance.removeObserver(this);
+    _stopScanning();
+    _cameraManager.dispose();
     _scanTimer?.cancel();
-    _cameraManager?.dispose();
     super.dispose();
   }
 
-  Future<void> _initializeCamera() async {
-    try {
-      // Initialize the barcode SDK first
-      await _initializeSDK();
-      
-      _cameraManager = PlatformCameraManager.create();
-      await _cameraManager!.initialize(widget.config);
-      
-      if (mounted) {
-        setState(() {
-          _isInitialized = true;
-        });
-        
-        _startScanning();
-      }
-    } catch (e) {
-      debugPrint('❌ Camera initialization failed: $e');
-      if (mounted) {
-        setState(() {
-          _errorMessage = 'Failed to initialize camera: $e';
-        });
-        widget.onError?.call(_errorMessage!);
-      }
-    }
-  }
-
-  Future<void> _initializeSDK() async {
-    try {
-      debugPrint('🤖 Initializing YOLO Barcode Detection Model');
-      
-      // Copy model from assets to writable location
-      final appDir = await getApplicationDocumentsDirectory();
-      final modelFile = File(path.join(appDir.path, 'best.rten'));
-      
-      if (!await modelFile.exists()) {
-        debugPrint('📦 Copying model from app bundle to: ${modelFile.path}');
-        final assetData = await rootBundle.load(widget.config.modelPath);
-        final bytes = assetData.buffer.asUint8List();
-        await modelFile.writeAsBytes(bytes);
-        debugPrint('💾 Model copied successfully. Size: ${bytes.length} bytes (${(bytes.length / 1024 / 1024).toStringAsFixed(1)} MB)');
-      } else {
-        debugPrint('✅ Model already exists at: ${modelFile.path}');
-      }
-      
-      // Initialize the SDK with the model path
-      final success = await core_barcode.BarcodeDetector.initialize(modelFile.path);
-      
-      if (success) {
-        debugPrint('✅ Barcode SDK initialized successfully');
-      } else {
-        throw Exception('Failed to initialize barcode SDK');
-      }
-    } catch (e) {
-      throw Exception('SDK initialization failed: $e');
-    }
-  }
-
-  void _startScanning() {
-    if (!_isScanning) return;
-    
-    _scanTimer = Timer.periodic(widget.config.scanInterval, (timer) async {
-      if (!_isScanning || !mounted || _cameraManager == null) {
-        timer.cancel();
-        return;
-      }
-      
-      try {
-        await _captureAndProcess();
-      } catch (e) {
-        debugPrint('❌ Scanning error: $e');
-        widget.onError?.call('Scanning error: $e');
-      }
-    });
-  }
-
-  Future<void> _captureAndProcess() async {
-    if (_cameraManager == null || !_cameraManager!.isInitialized) {
-      return;
-    }
-    
-    try {
-      final imageBytes = await _cameraManager!.takePicture();
-      final result = await _processImage(imageBytes);
-      
-      if (result != null && mounted) {
-        _handleBarcodeDetected(result);
-      }
-    } catch (e) {
-      debugPrint('❌ Image capture/processing failed: $e');
-      // Don't call error callback for individual capture failures
-      // as they're often temporary (camera busy, etc.)
-    }
-  }
-
-  Future<BarcodeResult?> _processImage(Uint8List imageBytes) async {
-    try {
-      // Process the image using the weebi_barcode_dart SDK
-      final results = await core_barcode.BarcodeDetector.processImage(
-        format: core_barcode.ImageFormat.jpeg,
-        bytes: imageBytes,
-        useSuperResolution: widget.config.useSuperResolution,
-      );
-      
-      if (results.isNotEmpty) {
-        final coreResult = results.first;
-        
-        // Convert core result to our widget result format
-        final result = BarcodeResult(
-          text: coreResult.text,
-          format: coreResult.format,
-        );
-        
-        // Extract detection coordinates for visualization
-        if (coreResult.bounds != null) {
-          setState(() {
-            _latestDetectionCoordinates = {
-              'left': coreResult.bounds!.left,
-              'top': coreResult.bounds!.top,
-              'right': coreResult.bounds!.right,
-              'bottom': coreResult.bounds!.bottom,
-              'confidence': coreResult.bounds!.confidence,
-              'barcodeType': coreResult.format,
-            };
-            _lastDetectionTime = DateTime.now();
-          });
-          debugPrint('🎯 Detection coordinates: $_latestDetectionCoordinates');
-        }
-        
-        return result;
-      }
-      
-      return null;
-    } catch (e) {
-      debugPrint('❌ Image processing failed: $e');
-      rethrow;
-    }
-  }
-
-  void _handleBarcodeDetected(BarcodeResult result) {
-    debugPrint('🎯 Barcode detected: ${result.text} (${result.format})');
-    
-    // Play haptic feedback if enabled
-    if (widget.config.enableHapticFeedback) {
-      _playSuccessSound();
-    }
-    
-    widget.onBarcodeDetected(result);
-    
-    // Stop scanning if configured for single scan
-    if (widget.config.scanOnce) {
-      _stopScanning();
-    }
-  }
-
-  void _playSuccessSound() {
-    try {
-      HapticFeedback.lightImpact();
-      debugPrint('✅ Haptic feedback played');
-    } catch (e) {
-      debugPrint('❌ Failed to play haptic feedback: $e');
-    }
-  }
-
-  void _stopScanning() {
+  void _pauseScanning() {
+    _scanTimer?.cancel();
     setState(() {
       _isScanning = false;
     });
-    _scanTimer?.cancel();
-    debugPrint('⏹️ Scanning stopped');
   }
 
-  void resumeScanning() {
-    if (!_isScanning && _isInitialized) {
+  void _resumeScanning() {
+    if (!_isDisposing && _detectorInitialized) {
       setState(() {
         _isScanning = true;
       });
       _startScanning();
-      debugPrint('▶️ Scanning resumed');
     }
   }
 
-  void stopScanning() {
-    _stopScanning();
+  Future<void> _reinitializeScanner() async {
+    if (_isDisposing) return;
+    
+    // Stop current operations
+    _scanTimer?.cancel();
+    
+    // Reset state
+    setState(() {
+      _isInitializing = false;
+      _error = null;
+      _detectorInitialized = false;
+    });
+    
+    // Wait a bit for cleanup
+    await Future.delayed(const Duration(milliseconds: 500));
+    
+    // Reinitialize
+    if (!_isDisposing) {
+      _initializeScanner();
+    }
+  }
+
+  Future<void> _initializeScanner() async {
+    if (_isInitializing || _isDisposing) return;
+
+    setState(() {
+      _isInitializing = true;
+      _error = null;
+    });
+
+    try {
+      // Initialize camera with enhanced disposal handling
+      final controller = await _cameraManager.initializeCamera();
+      if (controller == null || _isDisposing) {
+        setState(() {
+          _error = 'Failed to initialize camera';
+          _isInitializing = false;
+        });
+        return;
+      }
+
+      // Initialize barcode detector if not already done
+      if (!core_barcode.BarcodeDetector.isInitialized) {
+        final success = await core_barcode.BarcodeDetector.initialize(widget.config.modelPath);
+        if (!success) {
+          setState(() {
+            _error = 'Failed to initialize barcode detector';
+            _isInitializing = false;
+          });
+          return;
+        }
+      }
+      _detectorInitialized = true;
+
+      if (!_isDisposing) {
+        setState(() {
+          _isInitializing = false;
+        });
+        
+        // Start scanning after a short delay
+        await Future.delayed(const Duration(milliseconds: 200));
+        if (!_isDisposing) {
+          _startScanning();
+        }
+      }
+    } catch (e) {
+      if (!_isDisposing) {
+        debugPrint('Error initializing scanner: $e');
+        setState(() {
+          _error = 'Camera initialization failed: $e';
+          _isInitializing = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _startScanning() async {
+    if (_isScanning || _isDisposing || !_cameraManager.isInitialized) return;
+
+    _isScanning = true;
+    
+    // Windows uses timer-based scanning with camera snapshots
+    if (_cameraManager.isWindows) {
+      _scanTimer = Timer.periodic(const Duration(milliseconds: 600), (timer) {
+        if (!_isScanning || _isDisposing) {
+          timer.cancel();
+          return;
+        }
+        _processWindowsFrame();
+      });
+    } else {
+      // Mobile platforms can use image streams (not implemented in this simplified version)
+      // For now, also use timer-based approach
+      _scanTimer = Timer.periodic(const Duration(milliseconds: 400), (timer) {
+        if (!_isScanning || _isDisposing) {
+          timer.cancel();
+          return;
+        }
+        _processWindowsFrame();
+      });
+    }
+  }
+
+  Future<void> _stopScanning() async {
+    _isScanning = false;
+    _scanTimer?.cancel();
+    _scanTimer = null;
+  }
+
+  Future<void> _processWindowsFrame() async {
+    if (_isDisposing || !_detectorInitialized || !_cameraManager.isInitialized) return;
+
+    try {
+      final imageBytes = await _cameraManager.takePicture();
+      if (imageBytes == null || _isDisposing) return;
+
+      final results = await core_barcode.BarcodeDetector.processImage(
+        format: core_barcode.ImageFormat.jpeg,
+        bytes: imageBytes,
+      );
+
+      if (results.isNotEmpty && !_isDisposing) {
+        final coreResult = results.first;
+        
+        // Convert to our BarcodeResult format
+        final result = BarcodeResult(
+          text: coreResult.text,
+          format: coreResult.format,
+          confidence: coreResult.bounds?.confidence,
+          location: coreResult.bounds != null ? {
+            'left': coreResult.bounds!.left,
+            'top': coreResult.bounds!.top,
+            'right': coreResult.bounds!.right,
+            'bottom': coreResult.bounds!.bottom,
+          } : null,
+        );
+        
+        setState(() {
+          _latestBarcode = result;
+          _lastDetectionTime = DateTime.now();
+        });
+
+        widget.onBarcodeDetected?.call(result);
+      }
+    } catch (e) {
+      debugPrint('Error processing frame: $e');
+    }
+  }
+
+  Future<void> _reinitializeForHotReload() async {
+    if (_isInitializing) return;
+    
+    setState(() {
+      _isInitializing = true;
+      _error = null;
+    });
+
+    try {
+      // Stop current scanning
+      _stopScanning();
+      
+      // Force dispose camera for hot reload with longer delays
+      await _cameraManager.forceDispose();
+      
+      // Reset detector state
+      _detectorInitialized = false;
+      _latestBarcode = null;
+      _lastDetectionTime = null;
+      
+      // Windows needs extra time for hot reload
+      if (_cameraManager.isWindows) {
+        await Future.delayed(const Duration(milliseconds: 1500));
+      } else {
+        await Future.delayed(const Duration(milliseconds: 500));
+      }
+      
+      // Reinitialize
+      if (!_isDisposing) {
+        await _initializeScanner();
+      }
+    } catch (e) {
+      debugPrint('Error during hot reload reinitialize: $e');
+      if (mounted && !_isDisposing) {
+        setState(() {
+          _error = 'Hot reload error - restart app if issues persist';
+          _isInitializing = false;
+        });
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_errorMessage != null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error, size: 48, color: Colors.red),
-            const SizedBox(height: 16),
-            Text(
-              'Camera Error',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              _errorMessage!,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  _errorMessage = null;
-                  _isInitialized = false;
-                });
-                _initializeCamera();
-              },
-              child: const Text('Retry'),
-            ),
-          ],
-        ),
-      );
-    }
-    
-    if (!_isInitialized || _cameraManager == null) {
-      return widget.loadingWidget ?? 
-        const Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text('Initializing Camera...'),
-            ],
-          ),
-        );
-    }
-    
-    return Stack(
-      children: [
-        // Camera preview
-        _cameraManager!.buildPreviewWidget(),
-        
-        // Detection overlay (shows barcode location from YOLO)
-        if (widget.config.showOverlay)
-          _BarcodeDetectionOverlay(
-            detectionCoordinates: _latestDetectionCoordinates,
-            overlayColor: widget.config.overlayColor,
-          ),
-        
-        // Scanning status indicator
-        if (!_isScanning)
-          Container(
-            color: Colors.black54,
-            child: const Center(
+    return Container(
+      color: Colors.black,
+      child: Stack(
+        children: [
+          if (_isInitializing)
+            const Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.pause_circle, size: 64, color: Colors.white),
+                  CircularProgressIndicator(),
                   SizedBox(height: 16),
                   Text(
-                    'Scanning Paused',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    'Initializing camera...',
+                    style: TextStyle(color: Colors.white),
                   ),
                 ],
               ),
+            )
+          else if (_error != null)
+            Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error, color: Colors.red, size: 48),
+                  const SizedBox(height: 16),
+                  Text(
+                    _error!,
+                    style: const TextStyle(color: Colors.white),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: _initializeScanner,
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            )
+          else if (_cameraManager.isInitialized)
+            _buildCameraPreview(context),
+          
+          // Only show overlay if camera is working
+          if (_cameraManager.isInitialized && !_isInitializing && _error == null)
+            Positioned.fill(
+              child: CustomPaint(
+                painter: DirectBarcodeOverlayPainter(
+                  barcodeResult: _latestBarcode,
+                ),
+              ),
             ),
-          ),
-      ],
-    );
-  }
-}
-
-/// Custom overlay widget that shows barcode detection in real-time
-class _BarcodeDetectionOverlay extends StatelessWidget {
-  final Map<String, dynamic>? detectionCoordinates;
-  final Color overlayColor;
-
-  const _BarcodeDetectionOverlay({
-    this.detectionCoordinates,
-    required this.overlayColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return CustomPaint(
-      painter: _DetectionOverlayPainter(
-        detectionCoordinates: detectionCoordinates,
-        overlayColor: overlayColor,
+        ],
       ),
-      child: Container(),
+    );
+  }
+
+  Widget _buildCameraPreview(BuildContext context) {
+    final controller = _cameraManager.controller!;
+    final size = MediaQuery.of(context).size;
+    final previewSize = controller.value.previewSize!;
+    
+    // Calculate scaling to fill the screen while maintaining aspect ratio
+    final screenRatio = size.width / size.height;
+    final previewRatio = previewSize.width / previewSize.height;
+    
+    late final double scale;
+    if (screenRatio > previewRatio) {
+      // Screen is wider than preview, scale to fill height
+      scale = size.height / previewSize.height;
+    } else {
+      // Screen is taller than preview, scale to fill width
+      scale = size.width / previewSize.width;
+    }
+
+    return Container(
+      width: size.width,
+      height: size.height,
+      color: Colors.black,
+      child: ClipRect(
+        child: Transform.scale(
+          scale: scale,
+          child: Center(
+            child: Platform.isWindows
+                ? Transform(
+                    alignment: Alignment.center,
+                    // Flip horizontally to correct mirror effect for Windows cameras
+                    transform: Matrix4.identity()..scale(-1.0, 1.0, 1.0),
+                    child: CameraPreview(controller),
+                  )
+                : CameraPreview(controller),
+          ),
+        ),
+      ),
     );
   }
 }
 
-/// Custom painter for barcode detection overlay
-class _DetectionOverlayPainter extends CustomPainter {
-  final Map<String, dynamic>? detectionCoordinates;
-  final Color overlayColor;
+/// Custom painter for drawing barcode detection bounds
+class BarcodeOverlayPainter extends CustomPainter {
+  final Map<String, dynamic> detectionBounds;
+  final Size previewSize;
 
-  _DetectionOverlayPainter({
-    this.detectionCoordinates,
-    required this.overlayColor,
+  BarcodeOverlayPainter({
+    required this.detectionBounds,
+    required this.previewSize,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (detectionCoordinates != null) {
-      _drawDetectionBox(canvas, size, detectionCoordinates!);
+    final paint = Paint()
+      ..color = Colors.green
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3.0;
+
+    // Calculate the actual display area of the camera preview
+    // CameraPreview maintains aspect ratio and may letterbox or crop
+    final previewAspectRatio = previewSize.width / previewSize.height;
+    final widgetAspectRatio = size.width / size.height;
+    
+    late final Rect displayRect;
+    
+    if (previewAspectRatio > widgetAspectRatio) {
+      // Preview is wider - will be letterboxed top/bottom
+      final displayHeight = size.width / previewAspectRatio;
+      final yOffset = (size.height - displayHeight) / 2;
+      displayRect = Rect.fromLTWH(0, yOffset, size.width, displayHeight);
     } else {
+      // Preview is taller - will be letterboxed left/right
+      final displayWidth = size.height * previewAspectRatio;
+      final xOffset = (size.width - displayWidth) / 2;
+      displayRect = Rect.fromLTWH(xOffset, 0, displayWidth, size.height);
+    }
+
+    // Scale detection bounds to the actual display area
+    final scaleX = displayRect.width / previewSize.width;
+    final scaleY = displayRect.height / previewSize.height;
+
+    final left = displayRect.left + (detectionBounds['left'] * scaleX);
+    final top = displayRect.top + (detectionBounds['top'] * scaleY);
+    final right = displayRect.left + (detectionBounds['right'] * scaleX);
+    final bottom = displayRect.top + (detectionBounds['bottom'] * scaleY);
+
+    final rect = Rect.fromLTRB(left, top, right, bottom);
+    canvas.drawRect(rect, paint);
+
+    // Draw corner markers
+    final cornerSize = 20.0;
+    final cornerPaint = Paint()
+      ..color = Colors.green
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4.0;
+
+    // Top-left corner
+    canvas.drawLine(
+      Offset(left, top),
+      Offset(left + cornerSize, top),
+      cornerPaint,
+    );
+    canvas.drawLine(
+      Offset(left, top),
+      Offset(left, top + cornerSize),
+      cornerPaint,
+    );
+
+    // Top-right corner
+    canvas.drawLine(
+      Offset(right, top),
+      Offset(right - cornerSize, top),
+      cornerPaint,
+    );
+    canvas.drawLine(
+      Offset(right, top),
+      Offset(right, top + cornerSize),
+      cornerPaint,
+    );
+
+    // Bottom-left corner
+    canvas.drawLine(
+      Offset(left, bottom),
+      Offset(left + cornerSize, bottom),
+      cornerPaint,
+    );
+    canvas.drawLine(
+      Offset(left, bottom),
+      Offset(left, bottom - cornerSize),
+      cornerPaint,
+    );
+
+    // Bottom-right corner
+    canvas.drawLine(
+      Offset(right, bottom),
+      Offset(right - cornerSize, bottom),
+      cornerPaint,
+    );
+    canvas.drawLine(
+      Offset(right, bottom),
+      Offset(right, bottom - cornerSize),
+      cornerPaint,
+    );
+    
+    // Debug: Draw the actual display area (optional - can be removed)
+    if (false) { // Set to true for debugging
+      final debugPaint = Paint()
+        ..color = Colors.red
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.0;
+      canvas.drawRect(displayRect, debugPaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+}
+
+// Scaled overlay painter that properly handles coordinate transformation
+class ScaledBarcodeOverlayPainter extends CustomPainter {
+  final BarcodeResult? barcodeResult;
+  final Size? cameraPreviewSize;
+
+  ScaledBarcodeOverlayPainter({
+    this.barcodeResult, 
+    this.cameraPreviewSize,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (barcodeResult?.location == null || cameraPreviewSize == null) {
       _drawCenterCrosshair(canvas, size);
+      return;
+    }
+
+    final location = barcodeResult!.location!;
+    
+    // Calculate scaling factors from camera preview to widget
+    final double scaleX = size.width / cameraPreviewSize!.width;
+    final double scaleY = size.height / cameraPreviewSize!.height;
+    
+    // Apply scaling to coordinates
+    final double left = (location['left'] ?? 0).toDouble() * scaleX;
+    final double top = (location['top'] ?? 0).toDouble() * scaleY;
+    final double right = (location['right'] ?? 0).toDouble() * scaleX;
+    final double bottom = (location['bottom'] ?? 0).toDouble() * scaleY;
+
+    // Add some padding to make the box more visible
+    final double barcodeWidth = right - left;
+    final double padding = barcodeWidth * 0.1; // 10% padding
+    
+    final Paint paint = Paint()
+      ..color = Colors.green
+      ..strokeWidth = 3.0
+      ..style = PaintingStyle.stroke;
+
+    // Draw bounding rectangle with padding
+    canvas.drawRect(
+      Rect.fromLTRB(
+        (left - padding).clamp(0, size.width),
+        top,
+        (right + padding).clamp(0, size.width),
+        bottom,
+      ),
+      paint,
+    );
+
+    // Draw confidence score if available
+    final double confidence = barcodeResult!.confidence ?? 0.0;
+    final String format = barcodeResult!.format;
+    
+    if (confidence > 0) {
+      final textStyle = TextStyle(
+        color: Colors.green,
+        fontSize: 14,
+        fontWeight: FontWeight.bold,
+        backgroundColor: Colors.black54,
+      );
+      
+      final textSpan = TextSpan(
+        text: '${(confidence * 100).toStringAsFixed(1)}% $format',
+        style: textStyle,
+      );
+      
+      final textPainter = TextPainter(
+        text: textSpan,
+        textDirection: TextDirection.ltr,
+      );
+      
+      textPainter.layout();
+      textPainter.paint(canvas, Offset(left, (top - 25).clamp(0, size.height)));
     }
   }
 
   void _drawCenterCrosshair(Canvas canvas, Size size) {
     final Paint paint = Paint()
-      ..color = overlayColor.withOpacity(0.6)
+      ..color = Colors.blue
       ..strokeWidth = 2.0
       ..style = PaintingStyle.stroke;
 
@@ -421,27 +651,130 @@ class _DetectionOverlayPainter extends CustomPainter {
     );
   }
 
-  void _drawDetectionBox(Canvas canvas, Size size, Map<String, dynamic> detection) {
-    final Paint paint = Paint()
+  @override
+  bool shouldRepaint(ScaledBarcodeOverlayPainter oldDelegate) {
+    return oldDelegate.barcodeResult != barcodeResult || 
+           oldDelegate.cameraPreviewSize != cameraPreviewSize;
+  }
+}
+
+class DirectBarcodeOverlayPainter extends CustomPainter {
+  final BarcodeResult? barcodeResult;
+
+  DirectBarcodeOverlayPainter({
+    this.barcodeResult,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (barcodeResult?.location == null) {
+      _drawCenterCrosshair(canvas, size);
+      return;
+    }
+
+    final location = barcodeResult!.location!;
+    
+    final paint = Paint()
       ..color = Colors.green
-      ..strokeWidth = 3.0
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3.0;
+
+    final left = location['left']! * size.width;
+    final top = location['top']! * size.height;
+    final right = location['right']! * size.width;
+    final bottom = location['bottom']! * size.height;
+
+    final rect = Rect.fromLTRB(left, top, right, bottom);
+    canvas.drawRect(rect, paint);
+
+    // Draw corner markers
+    final cornerSize = 20.0;
+    final cornerPaint = Paint()
+      ..color = Colors.green
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4.0;
+
+    // Top-left corner
+    canvas.drawLine(
+      Offset(left, top),
+      Offset(left + cornerSize, top),
+      cornerPaint,
+    );
+    canvas.drawLine(
+      Offset(left, top),
+      Offset(left, top + cornerSize),
+      cornerPaint,
+    );
+
+    // Top-right corner
+    canvas.drawLine(
+      Offset(right, top),
+      Offset(right - cornerSize, top),
+      cornerPaint,
+    );
+    canvas.drawLine(
+      Offset(right, top),
+      Offset(right, top + cornerSize),
+      cornerPaint,
+    );
+
+    // Bottom-left corner
+    canvas.drawLine(
+      Offset(left, bottom),
+      Offset(left + cornerSize, bottom),
+      cornerPaint,
+    );
+    canvas.drawLine(
+      Offset(left, bottom),
+      Offset(left, bottom - cornerSize),
+      cornerPaint,
+    );
+
+    // Bottom-right corner
+    canvas.drawLine(
+      Offset(right, bottom),
+      Offset(right - cornerSize, bottom),
+      cornerPaint,
+    );
+    canvas.drawLine(
+      Offset(right, bottom),
+      Offset(right, bottom - cornerSize),
+      cornerPaint,
+    );
+  }
+
+  void _drawCenterCrosshair(Canvas canvas, Size size) {
+    final Paint paint = Paint()
+      ..color = Colors.blue
+      ..strokeWidth = 2.0
       ..style = PaintingStyle.stroke;
 
-    final double left = detection['left'].toDouble();
-    final double top = detection['top'].toDouble();
-    final double right = detection['right'].toDouble();
-    final double bottom = detection['bottom'].toDouble();
+    final double centerX = size.width / 2;
+    final double centerY = size.height / 2;
+    final double crosshairSize = 20.0;
 
-    // Draw bounding rectangle
-    canvas.drawRect(
-      Rect.fromLTRB(left, top, right, bottom),
+    // Draw crosshair
+    canvas.drawLine(
+      Offset(centerX - crosshairSize, centerY), 
+      Offset(centerX + crosshairSize, centerY), 
       paint
+    );
+    canvas.drawLine(
+      Offset(centerX, centerY - crosshairSize), 
+      Offset(centerX, centerY + crosshairSize), 
+      paint
+    );
+
+    // Draw center circle
+    canvas.drawCircle(
+      Offset(centerX, centerY),
+      3.0,
+      paint..style = PaintingStyle.fill,
     );
   }
 
   @override
-  bool shouldRepaint(_DetectionOverlayPainter oldDelegate) {
-    return detectionCoordinates != oldDelegate.detectionCoordinates ||
-           overlayColor != oldDelegate.overlayColor;
+  bool shouldRepaint(DirectBarcodeOverlayPainter oldDelegate) {
+    return oldDelegate.barcodeResult != barcodeResult;
   }
 } 

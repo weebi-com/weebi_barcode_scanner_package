@@ -1,3 +1,11 @@
+## 1.3.0 - 2025-06-25
+
+- fix example
+
+## 1.2.0 
+
+- decouple dependencies
+
 ## 1.1.0 - 2025-01-16
 
 - Removed dependency on separate `dart_barcode` package

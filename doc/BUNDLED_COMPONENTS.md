@@ -10,10 +10,6 @@ This package includes several bundled components to provide a seamless integrati
 - **Size**: ~12.2MB
 - **Purpose**: Barcode detection AI model for accurate barcode localization
 
-### Commercial Use
-For commercial applications, you must obtain:
-- **Ultralytics Enterprise License** for the YOLO model
-- **Weebi Enterprise License** for commercial model usage
 
 ## 2. Weebi Rust Barcode Library (`rust_barcode_lib.dll`)
 
@@ -28,10 +24,6 @@ For commercial applications, you must obtain:
 - Image preprocessing and enhancement
 - rxing barcode decoding
 - Windows-optimized BGRA8888 image handling
-
-### Commercial Use
-Commercial usage requires a **Weebi Enterprise License**.
-The bundled DLL is provided for evaluation purposes only.
 
 ## 3. Dart FFI Bindings
 
@@ -51,8 +43,6 @@ When using this package:
 
 1. **Include attribution** in your app credits
 2. **Respect AGPL-3.0** for the YOLO model
-3. **Contact Weebi** for enterprise licensing
-4. **Review usage rights** for your specific use case
 
 ## Support
 

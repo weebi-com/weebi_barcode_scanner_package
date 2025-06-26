@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.example" "\0"
-            VALUE "FileDescription", "weebi_barcode_scanner_example" "\0"
+            VALUE "FileDescription", "barcode_scanner_example" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "weebi_barcode_scanner_example" "\0"
+            VALUE "InternalName", "barcode_scanner_example" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2025 com.example. All rights reserved." "\0"
-            VALUE "OriginalFilename", "weebi_barcode_scanner_example.exe" "\0"
-            VALUE "ProductName", "weebi_barcode_scanner_example" "\0"
+            VALUE "OriginalFilename", "barcode_scanner_example.exe" "\0"
+            VALUE "ProductName", "barcode_scanner_example" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END
