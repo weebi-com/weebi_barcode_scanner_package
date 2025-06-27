@@ -1,3 +1,8 @@
+## 1.6.5
+
+- fix windows dll path 
+- UX reworked in simple case 
+
 ## 1.6.4 
 
 - add BarcodeDetector class
