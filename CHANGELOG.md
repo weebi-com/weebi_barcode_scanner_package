@@ -1,3 +1,13 @@
+## 1.6.4 
+
+- add BarcodeDetector class
+
+## 1.6.4
+
+- **FIXED**: Improved automatic Navigator context detection in WeebiBarcodeScanner.scan() method
+- Fixed Navigator context issues - now works like barcode_scan2 without requiring context parameter
+- WeebiBarcodeScanner.scan() now properly finds Navigator context automatically
+
 ## 1.6.3
 
 - **CRITICAL FIX**: Fixed missing dart_barcode model classes in published package

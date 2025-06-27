@@ -515,7 +515,7 @@ packages:
       path: ".."
       relative: true
     source: path
-    version: "1.6.2"
+    version: "1.6.4"
   weebi_openfoodfacts_service:
     dependency: "direct main"
     description:

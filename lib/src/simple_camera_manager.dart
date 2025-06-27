@@ -97,10 +97,17 @@ class SimpleCameraManager {
       
       // If we get a "camera already exists" error on Windows, try disposing and retrying once
       if (isWindows && e.toString().contains('already exists')) {
-        debugPrint('Windows: Attempting camera cleanup and retry...');
+        debugPrint('Windows: Camera "already exists" error detected, attempting cleanup and retry...');
         try {
-          await dispose();
-          await Future.delayed(const Duration(seconds: 1));
+          // Force complete disposal and cleanup
+          if (controller != null) {
+            await controller!.dispose();
+            controller = null;
+          }
+          
+          // Extended wait for Windows camera resource cleanup
+          await Future.delayed(const Duration(milliseconds: 2000));
+          
           return await _retryInitializeCamera();
         } catch (retryError) {
           debugPrint('Windows: Camera retry failed: $retryError');
@@ -114,6 +121,14 @@ class SimpleCameraManager {
 
   Future<CameraController?> _retryInitializeCamera() async {
     try {
+      // Ensure complete disposal before retry
+      if (controller != null) {
+        debugPrint('Windows retry: Force disposing existing controller...');
+        await dispose();
+        // Extra wait for Windows camera resource cleanup
+        await Future.delayed(const Duration(milliseconds: 1500));
+      }
+      
       _isDisposed = false;
       
       final cameras = await availableCameras();
@@ -140,6 +155,12 @@ class SimpleCameraManager {
       );
       
       if (!_isDisposed && newController.value.isInitialized) {
+        try {
+          await newController.setFocusMode(FocusMode.auto);
+        } catch (e) {
+          debugPrint('Windows retry: Focus mode setting failed (non-critical): $e');
+        }
+        
         controller = newController;
         debugPrint('Windows: Camera retry successful');
         return newController;

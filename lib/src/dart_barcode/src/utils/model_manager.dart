@@ -57,8 +57,11 @@ class ModelManager {
     return size > (_expectedSizeBytes * 0.8); // Allow 20% variance
   }
   
-  /// Download the model from Hugging Face
-  static Future<void> downloadModel(String modelPath) async {
+  /// Download the model from Hugging Face with progress tracking
+  static Future<void> downloadModel(
+    String modelPath, {
+    void Function(double progress, String status)? onProgress,
+  }) async {
     final file = File(modelPath);
     
     // Create directory if it doesn't exist
@@ -68,6 +71,8 @@ class ModelManager {
       print('📥 Downloading YOLO model from Hugging Face...');
       print('🔗 Source: $_modelUrl');
       print('📁 Destination: $modelPath');
+      
+      onProgress?.call(0.0, 'Connecting to Hugging Face...');
       
       final client = HttpClient();
       client.connectionTimeout = const Duration(seconds: 30);
@@ -79,10 +84,33 @@ class ModelManager {
         throw Exception('Failed to download model: HTTP ${response.statusCode}');
       }
       
+      onProgress?.call(0.1, 'Starting download...');
+      
+      // Get content length if available
+      final contentLength = response.contentLength > 0 
+          ? response.contentLength 
+          : _expectedSizeBytes;
+      
       final bytes = <int>[];
+      int downloadedBytes = 0;
+      
       await for (final chunk in response) {
         bytes.addAll(chunk);
+        downloadedBytes += chunk.length;
+        
+        // Calculate progress (0.1 to 0.9 range for download)
+        final progress = 0.1 + (downloadedBytes / contentLength) * 0.8;
+        final progressPercent = (downloadedBytes / contentLength * 100).toInt();
+        final downloadedMB = (downloadedBytes / 1024 / 1024).toStringAsFixed(1);
+        final totalMB = (contentLength / 1024 / 1024).toStringAsFixed(1);
+        
+        onProgress?.call(
+          progress, 
+          'Downloading: $downloadedMB MB / $totalMB MB ($progressPercent%)'
+        );
       }
+      
+      onProgress?.call(0.9, 'Saving model file...');
       
       await file.writeAsBytes(bytes);
       client.close();
@@ -94,6 +122,8 @@ class ModelManager {
       if (downloadedSize < (_expectedSizeBytes * 0.8)) {
         throw Exception('Downloaded model appears corrupted (size: $downloadedSize bytes)');
       }
+      
+      onProgress?.call(1.0, 'Model ready!');
       
     } catch (e) {
       // Clean up partial download
@@ -107,12 +137,16 @@ class ModelManager {
   }
   
   /// Ensure model exists at path, download if missing
-  static Future<void> ensureModel(String modelPath) async {
+  static Future<void> ensureModel(
+    String modelPath, {
+    void Function(double progress, String status)? onProgress,
+  }) async {
     if (!modelExists(modelPath)) {
-      await downloadModel(modelPath);
+      await downloadModel(modelPath, onProgress: onProgress);
     } else {
       final size = File(modelPath).lengthSync();
       print('✅ Found existing model: $modelPath (${(size / 1024 / 1024).toStringAsFixed(1)} MB)');
+      onProgress?.call(1.0, 'Model already available');
     }
   }
 } 

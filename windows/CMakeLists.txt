@@ -47,6 +47,6 @@ target_link_libraries(${PLUGIN_NAME} PRIVATE flutter flutter_wrapper_plugin)
 # This list could contain prebuilt libraries, or libraries created by an
 # external build triggered from this build file.
 set(weebi_barcode_scanner_bundled_libraries
-  ""
+  "${CMAKE_CURRENT_SOURCE_DIR}/rust_barcode_lib.dll"
   PARENT_SCOPE
 ) 

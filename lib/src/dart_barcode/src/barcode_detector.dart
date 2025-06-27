@@ -47,7 +47,10 @@ class BarcodeDetector {
   /// If modelPath is null, uses default location in app documents
   /// Downloads model from Hugging Face if not found locally
   /// Throws exception if model not found and download fails
-  static Future<void> initializeOrDownload([String? modelPath]) async {
+  static Future<void> initializeOrDownload([
+    String? modelPath,
+    void Function(double progress, String status)? onProgress,
+  ]) async {
     if (_initialized) return;
 
     try {
@@ -55,7 +58,9 @@ class BarcodeDetector {
       final finalModelPath = modelPath ?? await ModelManager.getDefaultModelPath();
       
       // Ensure model exists (download if needed)
-      await ModelManager.ensureModel(finalModelPath);
+      await ModelManager.ensureModel(finalModelPath, onProgress: onProgress);
+      
+      onProgress?.call(1.0, 'Initializing barcode SDK...');
       
       // Initialize SDK
       final success = await initialize(finalModelPath);

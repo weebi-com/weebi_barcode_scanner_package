@@ -63,6 +63,10 @@ class _BarcodeScannerWidgetState extends State<BarcodeScannerWidget> with Widget
   Timer? _scanTimer;
   bool _isDisposing = false;
   
+  // Progress tracking for model download
+  double _initializationProgress = 0.0;
+  String _initializationStatus = 'Initializing...';
+  
   // Detection visualization state
   Map<String, dynamic>? _latestDetectionCoordinates;
   
@@ -148,6 +152,8 @@ class _BarcodeScannerWidgetState extends State<BarcodeScannerWidget> with Widget
       _isInitializing = false;
       _error = null;
       _detectorInitialized = false;
+      _initializationProgress = 0.0;
+      _initializationStatus = 'Initializing...';
     });
     
     // Wait a bit for cleanup
@@ -165,6 +171,8 @@ class _BarcodeScannerWidgetState extends State<BarcodeScannerWidget> with Widget
     setState(() {
       _isInitializing = true;
       _error = null;
+      _initializationProgress = 0.0;
+      _initializationStatus = 'Initializing camera...';
     });
 
     try {
@@ -178,10 +186,25 @@ class _BarcodeScannerWidgetState extends State<BarcodeScannerWidget> with Widget
         return;
       }
 
+      setState(() {
+        _initializationProgress = 0.3;
+        _initializationStatus = 'Camera ready, checking barcode model...';
+      });
+
       // Initialize barcode detector with auto-download if not already done
       if (!core_barcode.BarcodeDetector.isInitialized) {
         try {
-          await core_barcode.BarcodeDetector.initializeOrDownload(widget.config.modelPath);
+          await core_barcode.BarcodeDetector.initializeOrDownload(
+            widget.config.modelPath,
+            (progress, status) {
+              if (!_isDisposing) {
+                setState(() {
+                  _initializationProgress = 0.3 + (progress * 0.7); // Scale to 30% - 100% range
+                  _initializationStatus = status;
+                });
+              }
+            },
+          );
         } catch (e) {
           setState(() {
             _error = 'Failed to initialize barcode detector: $e';
@@ -189,6 +212,11 @@ class _BarcodeScannerWidgetState extends State<BarcodeScannerWidget> with Widget
           });
           return;
         }
+      } else {
+        setState(() {
+          _initializationProgress = 1.0;
+          _initializationStatus = 'Model already loaded';
+        });
       }
       _detectorInitialized = true;
 
@@ -293,6 +321,8 @@ class _BarcodeScannerWidgetState extends State<BarcodeScannerWidget> with Widget
     setState(() {
       _isInitializing = true;
       _error = null;
+      _initializationProgress = 0.0;
+      _initializationStatus = 'Hot reload: reinitializing...';
     });
 
     try {
@@ -336,16 +366,64 @@ class _BarcodeScannerWidgetState extends State<BarcodeScannerWidget> with Widget
       child: Stack(
         children: [
           if (_isInitializing)
-            const Center(
+            Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
+                  // Show progress indicator for downloads
+                  if (_initializationProgress > 0.0)
+                    Column(
+                      children: [
+                        SizedBox(
+                          width: 200,
+                          child: LinearProgressIndicator(
+                            value: _initializationProgress,
+                            backgroundColor: Colors.grey[800],
+                            valueColor: const AlwaysStoppedAnimation<Color>(Colors.green),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          '${(_initializationProgress * 100).toInt()}%',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+                    )
+                  else
+                    const Column(
+                      children: [
+                        CircularProgressIndicator(),
+                        SizedBox(height: 16),
+                      ],
+                    ),
+                  
                   Text(
-                    'Initializing camera...',
-                    style: TextStyle(color: Colors.white),
+                    _initializationStatus,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                    ),
+                    textAlign: TextAlign.center,
                   ),
+                  
+                  // Show helpful message for downloads
+                  if (_initializationStatus.contains('Downloading'))
+                    const Padding(
+                      padding: EdgeInsets.only(top: 8),
+                      child: Text(
+                        'First-time setup: downloading AI model',
+                        style: TextStyle(
+                          color: Colors.grey,
+                          fontSize: 12,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
                 ],
               ),
             )
