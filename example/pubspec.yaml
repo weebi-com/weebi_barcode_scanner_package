@@ -19,7 +19,8 @@ dependencies:
   weebi_barcode_scanner:
     path: ../
   # OpenFoodFacts integration via separate package
-  weebi_openfoodfacts_service: ^1.1.0    
+  weebi_openfoodfacts_service: #^1.1.0    
+    path: ../../weebi_openfoodfacts_service
   # Camera and image processing 
   camera: 0.10.5+5
   camera_windows: 0.2.6+2
@@ -41,20 +42,16 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
-  # Example of proper asset setup for weebi_barcode_scanner package
-  # These assets must be provided by the consuming application
+  # Model is now downloaded automatically - no need to bundle in assets
+  # The scanner will automatically download the model from Hugging Face on first use
   assets:
-    # REQUIRED: YOLO barcode detection model (11.68 MB)
-    # Download from: https://huggingface.co/weebi/weebi_barcode_detector/blob/main/best.rten
-    # License: AGPL-3.0 (requires attribution)
-    - assets/best.rten
     
     # PLATFORM-SPECIFIC: Include only what you need
     # Windows (10.87 MB)
     # - windows/rust_barcode_lib.dll  # Not needed - dart_barcode handles native loading
     
     # macOS (22 MB universal binary)  
-    - macos/Frameworks/
+    # - macos/Frameworks/
     
     # Android (per architecture)
     # - android/jniLibs/arm64-v8a/librust_barcode_lib.so

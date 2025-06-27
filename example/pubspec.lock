@@ -512,26 +512,24 @@ packages:
   weebi_barcode_dart:
     dependency: transitive
     description:
-      name: weebi_barcode_dart
-      sha256: "11d312c58ba9f77ac35cb5460fc686eafde7f97eeb7c17b5d59c8ab42bb4f895"
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.0.2"
+      path: "../../dart_barcode"
+      relative: true
+    source: path
+    version: "1.0.0"
   weebi_barcode_scanner:
     dependency: "direct main"
     description:
       path: ".."
       relative: true
     source: path
-    version: "1.6.0"
+    version: "1.6.1"
   weebi_openfoodfacts_service:
     dependency: "direct main"
     description:
-      name: weebi_openfoodfacts_service
-      sha256: f58d053a7937a110b550368b5180d009485f7791634f20858c2559929f939243
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.1.0"
+      path: "../../weebi_openfoodfacts_service"
+      relative: true
+    source: path
+    version: "1.2.0"
   xdg_directories:
     dependency: transitive
     description:
@@ -549,5 +547,5 @@ packages:
     source: hosted
     version: "6.5.0"
 sdks:
-  dart: ">=3.7.0 <4.0.0"
+  dart: ">=3.7.2 <4.0.0"
   flutter: ">=3.27.0"

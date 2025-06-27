@@ -180,12 +180,13 @@ class _BarcodeScannerWidgetState extends State<BarcodeScannerWidget> with Widget
         return;
       }
 
-      // Initialize barcode detector if not already done
+      // Initialize barcode detector with auto-download if not already done
       if (!core_barcode.BarcodeDetector.isInitialized) {
-        final success = await core_barcode.BarcodeDetector.initialize(widget.config.modelPath);
-        if (!success) {
+        try {
+          await core_barcode.BarcodeDetector.initializeOrDownload(widget.config.modelPath);
+        } catch (e) {
           setState(() {
-            _error = 'Failed to initialize barcode detector';
+            _error = 'Failed to initialize barcode detector: $e';
             _isInitializing = false;
           });
           return;

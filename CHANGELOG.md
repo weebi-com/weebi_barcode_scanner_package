@@ -1,3 +1,7 @@
+## 1.6.2
+
+- fix missing windows dep
+
 ## 1.6.1
 
 - simple single scan example

@@ -14,6 +14,25 @@ A Flutter package for barcode and QR code scanning on Windows and macOS powered 
 
 ## 📦 Installation
 
+```yaml
+# pubspec.yaml
+flutter:
+  assets:
+    - assets/best.rten  # 11.68 MB - YOLO barcode detection model
+```
+
+**Download**: [best.rten from Hugging Face](https://huggingface.co/weebi/weebi_barcode_detector/blob/main/best.rten)  
+**License**: AGPL-3.0 (Ultralytics)  
+**Attribution Required**: See [Model License](MODEL_LICENSE.md)
+
+### 🪟 **Windows** 
+```yaml
+# pubspec.yaml
+flutter:
+  assets:
+    - windows/rust_barcode_lib.dll  # 10.87 MB
+```
+
 Add this to your `pubspec.yaml`:
 
 ```yaml
@@ -28,6 +47,24 @@ flutter pub get
 ```
 
 ## Quick Start
+
+
+```dart
+import 'package:weebi_barcode_scanner/weebi_barcode_scanner.dart';
+
+// Scan a barcode with one line of code!
+var result = await WeebiBarcodeScanner.scan();
+
+if (result.isSuccess) {
+  print('Scanned: ${result.code}');
+  print('Format: ${result.format}');
+} else if (result.isCancelled) {
+  print('User cancelled the scan');
+} else if (result.hasError) {
+  print('Error: ${result.error}');
+}
+```
+
 ### Basic Usage
 
 ```dart
@@ -93,16 +130,6 @@ BarcodeScannerWidget(
 ```
 
 ## 🎯 Scanner Configurations
-
-### Pre-Built Configurations
-
-```dart
-// Point-of-sale: Single scan with haptic feedback
-ScannerConfig.pointOfSale()
-
-// Continuous: Multiple scans, no auto-stop
-ScannerConfig.continuous()
-```
 
 ### Custom Configuration
 
@@ -199,22 +226,9 @@ BarcodeScannerWidget(
 
 ## 🔧 Platform Setup
 
-### Windows
-- Camera permissions handled automatically
-- Native libraries included in package
-- No additional setup required
-
 ### Self-Contained Design
 - **Embedded AI Model**: YOLO detection model included
 - **Native Libraries**: Rust FFI libraries bundled
-- **No External Dependencies**: Everything needed is included
-- **Cross-Platform**: Single package works on Windows and macOS
-
-### Performance Optimizations
-- **Hardware Acceleration**: GPU-accelerated inference where available
-- **Efficient Memory Usage**: Optimized image processing pipeline
-- **Smart Caching**: Model and image caching for better performance
-- **Background Processing**: Non-blocking detection using isolates
 
 ## 🚨 Troubleshooting
 ### Common Issues

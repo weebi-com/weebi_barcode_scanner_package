@@ -33,9 +33,6 @@ flutter:
     - windows/rust_barcode_lib.dll  # 10.87 MB
 ```
 
-**Source**: Build from `rust-barcode-lib/` or download from GitHub releases  
-**Architecture**: x64  
-**Dependencies**: Visual C++ Redistributable 2019+
 
 ### 🍎 **macOS**
 ```yaml
