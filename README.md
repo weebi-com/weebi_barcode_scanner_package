@@ -1,6 +1,13 @@
 # Weebi Barcode Scanner
 
-A Flutter package for barcode and QR code scanning on Windows and macOS powered by YOLO object detection and ZXing decoding. **Self-contained and ready for pub.dev publication.**
+A Flutter package for barcode scanning (1D & 2D) on __laptop__(Windows and MacOS) powered by YOLO object detection and ZXing decoding.
+
+This package provides unprecedented support for windows barcode scanning in flutter. The only alternative was focused on QR code through a webview [simple_barcode_scanner](https://pub.dev/packages/simple_barcode_scanner).
+
+Thanks to computer vision barcode detection (yolo) and adequate image enhancement logic (rust pipeline), decoding results are even more accurate than the FFI zxing integration included in [flutter_zxing](https://pub.dev/packages/flutter_zxing).
+
+On Android for privacy-concerned scanning prefer [barcode_scan2](https://pub.dev/packages/barcode_scan2) which wraps zxing java APIs in a more performant way. For non private sensitive use-case go for [mobile_scanner](https://pub.dev/packages/mobile_scanner) which wraps the almighty Google ML Kit barcode.
+
 
 ## Features
 
@@ -8,37 +15,20 @@ A Flutter package for barcode and QR code scanning on Windows and macOS powered 
 - **AI-Powered Detection**: YOLO model for accurate barcode localization
 - **Multiple Formats**: QR codes, Code 128, EAN-13, and more
 - **Real-Time Processing**: Live camera feed with detection overlay
-- **Point-of-Sale Ready**: Optimized scanning modes for retail use
 - **OpenFoodFacts Integration**: Automatic product information lookup
-- **Self-Contained**: No external dependencies or manual asset copying
 
-## 📦 Installation
+## 📁 **Directory Structure Example**
 
-```yaml
-# pubspec.yaml
-flutter:
-  assets:
-    - assets/best.rten  # 11.68 MB - YOLO barcode detection model
+- yolo model is downloaded at class init 
+
 ```
-
-**Download**: [best.rten from Hugging Face](https://huggingface.co/weebi/weebi_barcode_detector/blob/main/best.rten)  
-**License**: AGPL-3.0 (Ultralytics)  
-**Attribution Required**: See [Model License](MODEL_LICENSE.md)
-
-### 🪟 **Windows** 
-```yaml
-# pubspec.yaml
-flutter:
-  assets:
-    - windows/rust_barcode_lib.dll  # 10.87 MB
-```
-
-Add this to your `pubspec.yaml`:
-
-```yaml
-dependencies:
-  # Camera permissions (automatically included)
-  permission_handler: ^11.0.0
+your_flutter_app/
+├── windows/
+│   └── rust_barcode_lib.dll               # 10.87 MB (Windows only)
+├── macos/
+│   └── Frameworks/
+│       └── librust_barcode_lib.dylib      # 22 MB (macOS only)
+└── pubspec.yaml
 ```
 
 Then run:
@@ -168,17 +158,9 @@ class BarcodeResult {
 }
 ```
 
-## 🖼️ Visual Detection Feedback
-
-The package automatically displays:
-- **Detection Overlay**: Shows barcode location even before decoding
-- **Confidence Indicators**: Visual feedback on detection quality
-- **Real-Time Tracking**: Bounding boxes follow detected barcodes
-- **Status Messages**: Clear feedback on scanning progress
-
 ## 🏪 OpenFoodFacts Integration
 
-Automatic product lookup for food barcodes:
+Product lookup :
 
 ```dart
 BarcodeScannerWidget(
@@ -224,11 +206,19 @@ BarcodeScannerWidget(
 )
 ```
 
-## 🔧 Platform Setup
+### Debug Information
 
-### Self-Contained Design
-- **Embedded AI Model**: YOLO detection model included
-- **Native Libraries**: Rust FFI libraries bundled
+```dart
+BarcodeScannerWidget(
+  config: ScannerConfig(
+    // Enable detailed logging
+    enableDebugMode: true,
+  ),
+  onError: (error) {
+    print('Detailed error: $error');
+  },
+)
+```
 
 ## 🚨 Troubleshooting
 ### Common Issues
@@ -247,20 +237,48 @@ BarcodeScannerWidget(
    - Increase `detectionInterval` (less frequent detection)
    - Disable `enableSuperResolution` if not needed
 
-### Debug Information
-
-```dart
-BarcodeScannerWidget(
-  config: ScannerConfig(
-    // Enable detailed logging
-    enableDebugMode: true,
-  ),
-  onError: (error) {
-    print('Detailed error: $error');
-  },
-)
-```
 
 ## 📝 License
 
 MIT License - see LICENSE file for details.
+
+### Bundled Components
+
+This package includes several bundled components to provide a seamless integration experience:
+
+#### 1. Weebi YOLO Barcode Detection Model (`best.rten`)
+
+- **File**: `assets/best.rten`
+- **Source**: [Hugging Face - weebi/weebi_barcode_detector](https://huggingface.co/weebi/weebi_barcode_detector)
+- **License**: AGPL-3.0 (Ultralytics YOLOv8)
+- **Size**: ~12.2MB
+- **Purpose**: Barcode detection AI model for accurate barcode localization
+
+
+#### 2. Weebi Rust Barcode Library (`rust_barcode_lib.dll`)
+
+- **File**: `windows/rust_barcode_lib.dll`
+- **Architecture**: Windows x64
+- **License**: Proprietary (Weebi.com)
+- **Size**: ~2.1MB
+- **Purpose**: High-performance barcode processing and rxing integration
+
+##### Features
+- YOLO model inference via RTEN runtime
+- Image preprocessing and enhancement
+- rxing barcode decoding
+- Windows-optimized BGRA8888 image handling
+
+#### 3. Dart FFI Bindings
+
+- **Files**: `lib/dart_barcode/`
+- **Purpose**: Flutter FFI integration with the Rust library
+
+When using this package:
+
+1. **Include attribution** in your app credits
+2. **Respect AGPL-3.0** for the YOLO model
+
+## Support
+
+- hello@weebi.com
