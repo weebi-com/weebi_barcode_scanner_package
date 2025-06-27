@@ -1,6 +1,6 @@
 name: weebi_barcode_scanner
 description: "Self-contained barcode scanner with real-time detection overlay. Features embedded YOLO detection, cross-platform support (Windows/macOS), point-of-sale optimizations, and OpenFoodFacts integration. No manual setup required."
-version: 1.6.2
+version: 1.6.4
 homepage: https://github.com/weebi-com/weebi_barcode_scanner
 repository: https://github.com/weebi-com/weebi_barcode_scanner_package
 issue_tracker: https://github.com/weebi-com/weebi_barcode_scanner_package/issues
@@ -17,7 +17,7 @@ dependencies:
   camera: ^0.10.5+5
   camera_windows: ^0.2.6+2
   camera_macos: ^0.0.9
-  
+
   # File handling and path utilities
   path: ^1.8.0
   path_provider: ^2.0.15

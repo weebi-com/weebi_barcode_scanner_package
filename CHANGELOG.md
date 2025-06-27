@@ -1,3 +1,9 @@
+## 1.6.3
+
+- **CRITICAL FIX**: Fixed missing dart_barcode model classes in published package
+- Fixed .gitignore excluding required Dart source files
+- Package now works properly when installed from pub.dev
+
 ## 1.6.2
 
 - fix missing windows dep

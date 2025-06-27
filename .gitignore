@@ -31,7 +31,7 @@ migrate_working_dir/
 build/
 example/pubspec.lock
 
-# Model files should not be committed
-models/
+# Neural network model files should not be committed (but Dart model classes should be)
 example/models/
 *.rten
+# Keep lib/src/dart_barcode/src/models/ - these are Dart source files, not model weight files
