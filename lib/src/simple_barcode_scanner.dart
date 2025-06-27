@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:weebi_barcode_dart/weebi_barcode_dart.dart' as core;
+import 'dart_barcode/weebi_barcode_dart.dart' as core;
 
 import 'barcode_result.dart';
 import 'barcode_scanner_widget.dart';

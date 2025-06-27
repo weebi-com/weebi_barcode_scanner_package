@@ -9,8 +9,6 @@ environment:
   sdk: ^3.7.2
   flutter: ">=3.0.0"
 
-resolution: workspace
-
 dependencies:
   flutter:
     sdk: flutter
@@ -20,15 +18,18 @@ dependencies:
   camera_windows: ^0.2.6+2
   camera_macos: ^0.0.9
   
-  # File handling
+  # File handling and path utilities
   path: ^1.8.0
+  path_provider: ^2.0.15
   
-  # Core barcode detection engine (local workspace dependency)
-  weebi_barcode_dart:
-    path: ../dart_barcode
-  # OpenFoodFacts integration via separate package (local workspace dependency)
-  weebi_openfoodfacts_service:
-    path: ../weebi_openfoodfacts_service
+  # FFI for native library integration (from dart_barcode)
+  ffi: ^2.0.1
+  
+  # Image processing utilities (from dart_barcode)
+  image: ^4.0.17
+  
+  # OpenFoodFacts integration via separate package
+  weebi_openfoodfacts_service: ^1.2.0
 
 dev_dependencies:
   flutter_test:

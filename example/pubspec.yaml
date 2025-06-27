@@ -19,8 +19,7 @@ dependencies:
   weebi_barcode_scanner:
     path: ../
   # OpenFoodFacts integration via separate package
-  weebi_openfoodfacts_service: #^1.1.0    
-    path: ../../weebi_openfoodfacts_service
+  weebi_openfoodfacts_service: ^1.2.0
   # Camera and image processing 
   camera: 0.10.5+5
   camera_windows: 0.2.6+2

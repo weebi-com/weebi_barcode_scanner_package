@@ -1,8 +1,5 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:camera/camera.dart';
 import 'package:weebi_barcode_scanner/weebi_barcode_scanner.dart';
 import 'package:weebi_openfoodfacts_service/weebi_openfoodfacts_service.dart';
 

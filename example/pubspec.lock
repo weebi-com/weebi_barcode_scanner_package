@@ -509,26 +509,20 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.1.1"
-  weebi_barcode_dart:
-    dependency: transitive
-    description:
-      path: "../../dart_barcode"
-      relative: true
-    source: path
-    version: "1.0.0"
   weebi_barcode_scanner:
     dependency: "direct main"
     description:
       path: ".."
       relative: true
     source: path
-    version: "1.6.1"
+    version: "1.6.2"
   weebi_openfoodfacts_service:
     dependency: "direct main"
     description:
-      path: "../../weebi_openfoodfacts_service"
-      relative: true
-    source: path
+      name: weebi_openfoodfacts_service
+      sha256: "480e7891a47d794667152be048194aed9d8434b03eb92e19af2a5beed70ae9f3"
+      url: "https://pub.dev"
+    source: hosted
     version: "1.2.0"
   xdg_directories:
     dependency: transitive

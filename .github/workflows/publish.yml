@@ -1,0 +1,218 @@
+name: Publish weebi_barcode_scanner
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+      - 'release-v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish (e.g., 1.6.2)'
+        required: true
+        type: string
+      dart_barcode_version:
+        description: 'weebi_barcode_dart version (e.g., 1.0.0)'
+        required: true
+        type: string
+      openfoodfacts_version:
+        description: 'weebi_openfoodfacts_service version (e.g., 1.2.0)'
+        required: true
+        type: string
+
+jobs:
+  validate-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter SDK
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 'stable'
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Verify dependencies
+        run: flutter pub deps
+
+      - name: Analyze code
+        run: flutter analyze --fatal-infos
+
+      - name: Run tests
+        run: flutter test
+
+  publish:
+    needs: validate-and-test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter SDK
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 'stable'
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          if [[ "${{ github.ref }}" =~ refs/tags/v(.+) ]]; then
+            echo "version=${BASH_REMATCH[1]}" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" =~ refs/tags/release-v(.+) ]]; then
+            echo "version=${BASH_REMATCH[1]}" >> $GITHUB_OUTPUT
+          else
+            echo "Invalid tag format" && exit 1
+          fi
+
+      - name: Update version in pubspec.yaml
+        run: |
+          sed -i "s/^version: .*/version: ${{ steps.version.outputs.version }}/" pubspec.yaml
+          echo "Updated version to: ${{ steps.version.outputs.version }}"
+          grep "^version:" pubspec.yaml
+
+      - name: Remove workspace resolution
+        run: |
+          # Remove the workspace resolution line that blocks publishing
+          sed -i '/^resolution: workspace$/d' pubspec.yaml
+          echo "Removed workspace resolution"
+
+      - name: Get latest dependency versions from pub.dev
+        id: deps
+        run: |
+          # Get latest versions of dependencies from pub.dev
+          DART_BARCODE_VERSION=$(curl -s https://pub.dev/api/packages/weebi_barcode_dart | jq -r '.latest.version')
+          OPENFOODFACTS_VERSION=$(curl -s https://pub.dev/api/packages/weebi_openfoodfacts_service | jq -r '.latest.version')
+          
+          echo "dart_barcode_version=$DART_BARCODE_VERSION" >> $GITHUB_OUTPUT
+          echo "openfoodfacts_version=$OPENFOODFACTS_VERSION" >> $GITHUB_OUTPUT
+          
+          echo "Latest weebi_barcode_dart: $DART_BARCODE_VERSION"
+          echo "Latest weebi_openfoodfacts_service: $OPENFOODFACTS_VERSION"
+
+      - name: Transform path dependencies to pub.dev
+        run: |
+          # Replace path dependencies with pub.dev versions
+          sed -i '/weebi_barcode_dart:/,/path: ..\/dart_barcode/c\  weebi_barcode_dart: ^${{ steps.deps.outputs.dart_barcode_version }}' pubspec.yaml
+          sed -i '/weebi_openfoodfacts_service:/,/path: ..\/weebi_openfoodfacts_service/c\  weebi_openfoodfacts_service: ^${{ steps.deps.outputs.openfoodfacts_version }}' pubspec.yaml
+          
+          echo "Updated dependencies:"
+          grep -A 1 "weebi_barcode_dart\|weebi_openfoodfacts_service" pubspec.yaml
+          
+      - name: Install dependencies with pub.dev versions
+        run: flutter pub get
+
+      - name: Validate transformed pubspec
+        run: flutter pub publish --dry-run
+
+      - name: Setup pub.dev credentials
+        run: |
+          mkdir -p ~/.pub-cache
+          echo '${{ secrets.PUB_DEV_CREDENTIALS }}' > ~/.pub-cache/credentials.json
+
+      - name: Publish to pub.dev
+        run: flutter pub publish --force
+
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: weebi_barcode_scanner v${{ steps.version.outputs.version }}
+          body: |
+            ## weebi_barcode_scanner v${{ steps.version.outputs.version }}
+            
+            📱 **Complete barcode scanner solution with embedded AI detection**
+            
+            ### Features
+            - Real-time barcode scanning with camera overlay
+            - Embedded YOLO neural network (auto-downloads ~12MB model)
+            - Cross-platform support (Windows/macOS/Android/iOS)
+            - OpenFoodFacts integration for product information
+            - Zero manual setup required - works out of the box
+            - Point-of-sale optimizations
+            
+            ### Installation
+            ```yaml
+            dependencies:
+              weebi_barcode_scanner: ^${{ steps.version.outputs.version }}
+            ```
+            
+            ### Quick Start
+            ```dart
+            SimpleBarcodeScanner(
+              onBarcodeDetected: (barcode) {
+                print('Scanned: ${barcode.text}');
+              },
+            )
+            ```
+            
+            ### Dependencies
+            - weebi_barcode_dart: ^${{ steps.deps.outputs.dart_barcode_version }}
+            - weebi_openfoodfacts_service: ^${{ steps.deps.outputs.openfoodfacts_version }}
+            
+            ### Links
+            - 📦 [pub.dev](https://pub.dev/packages/weebi_barcode_scanner)
+            - 📚 [Documentation](https://pub.dev/documentation/weebi_barcode_scanner)
+            - 🐛 [Issues](https://github.com/weebi-com/weebi_barcode_scanner_package/issues)
+          draft: false
+          prerelease: false
+
+  manual-publish:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter SDK
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 'stable'
+
+      - name: Update version in pubspec.yaml
+        run: |
+          sed -i "s/^version: .*/version: ${{ github.event.inputs.version }}/" pubspec.yaml
+          echo "Updated version to: ${{ github.event.inputs.version }}"
+          grep "^version:" pubspec.yaml
+
+      - name: Remove workspace resolution
+        run: |
+          sed -i '/^resolution: workspace$/d' pubspec.yaml
+          echo "Removed workspace resolution"
+
+      - name: Transform path dependencies to pub.dev
+        run: |
+          # Replace path dependencies with specified versions
+          sed -i '/weebi_barcode_dart:/,/path: ..\/dart_barcode/c\  weebi_barcode_dart: ^${{ github.event.inputs.dart_barcode_version }}' pubspec.yaml
+          sed -i '/weebi_openfoodfacts_service:/,/path: ..\/weebi_openfoodfacts_service/c\  weebi_openfoodfacts_service: ^${{ github.event.inputs.openfoodfacts_version }}' pubspec.yaml
+          
+          echo "Updated dependencies:"
+          grep -A 1 "weebi_barcode_dart\|weebi_openfoodfacts_service" pubspec.yaml
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run tests
+        run: flutter test
+
+      - name: Setup pub.dev credentials
+        run: |
+          mkdir -p ~/.pub-cache
+          echo '${{ secrets.PUB_DEV_CREDENTIALS }}' > ~/.pub-cache/credentials.json
+
+      - name: Publish to pub.dev
+        run: flutter pub publish --force
+
+      - name: Create tag
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git tag "v${{ github.event.inputs.version }}"
+          git push origin "v${{ github.event.inputs.version }}" 

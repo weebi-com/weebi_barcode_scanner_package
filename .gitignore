@@ -30,3 +30,8 @@ migrate_working_dir/
 .flutter-plugins-dependencies
 build/
 example/pubspec.lock
+
+# Model files should not be committed
+models/
+example/models/
+*.rten
