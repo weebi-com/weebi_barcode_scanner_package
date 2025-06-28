@@ -1,13 +1,12 @@
 # Weebi Barcode Scanner
 
-A Flutter package for barcode scanning (1D & 2D) on __laptop__(Windows and MacOS) powered by YOLO object detection and ZXing decoding.
+A Flutter package for barcode scanning (1D & 2D) on __laptop__(Windows and MacOS) powered by [YOLO](https://arxiv.org/abs/1506.02640) object detection and [ZXing](https://zxing.org/w/decode.jspx) decoding.
 
-This package provides unprecedented support for windows barcode scanning in flutter. The only alternative was focused on QR code through a webview [simple_barcode_scanner](https://pub.dev/packages/simple_barcode_scanner).
+This package provides unprecedented __free support__ for windows barcode scanning. The only free alternative in 2025 only handles QR code through a webview [simple_barcode_scanner](https://pub.dev/packages/simple_barcode_scanner).
 
-Thanks to computer vision barcode detection (yolo) and adequate image enhancement logic (rust pipeline), decoding results are even more accurate than the FFI zxing integration included in [flutter_zxing](https://pub.dev/packages/flutter_zxing).
+Thanks to computer vision and adequate image preprocessing, decoding results are enhanced and superior to raw zxing integration, i.e. [flutter_zxing](https://pub.dev/packages/flutter_zxing).
 
-On Android for privacy-concerned scanning prefer [barcode_scan2](https://pub.dev/packages/barcode_scan2) which wraps zxing java APIs in a more performant way. For non private sensitive use-case go for [mobile_scanner](https://pub.dev/packages/mobile_scanner) which wraps the almighty Google ML Kit barcode.
-
+On Android for privacy-concerned scanning consider [barcode_scan2](https://pub.dev/packages/barcode_scan2) which wraps zxing java APIs in a seamless way. For non private sensitive use-case prefer [mobile_scanner](https://pub.dev/packages/mobile_scanner) which provides the almighty Google ML Kit barcode.
 
 ## Features
 
@@ -15,7 +14,7 @@ On Android for privacy-concerned scanning prefer [barcode_scan2](https://pub.dev
 - **AI-Powered Detection**: YOLO model for accurate barcode localization
 - **Multiple Formats**: QR codes, Code 128, EAN-13, and more
 - **Real-Time Processing**: Live camera feed with detection overlay
-- **OpenFoodFacts Integration**: Automatic product information lookup
+- **OpenFoodFacts Integration**: Automatic product information lookup for demo purposes
 
 ## 📁 **Directory Structure Example**
 
@@ -119,8 +118,6 @@ BarcodeScannerWidget(
 )
 ```
 
-## 🎯 Scanner Configurations
-
 ### Custom Configuration
 
 ```dart
@@ -142,7 +139,7 @@ ScannerConfig(
 )
 ```
 
-## 📊 BarcodeResult
+### BarcodeResult
 
 ```dart
 class BarcodeResult {
@@ -156,6 +153,20 @@ class BarcodeResult {
   bool get hasProductInfo => productName != null;
   bool get hasLocationInfo => location != null;
 }
+```
+
+### Debug Information
+
+```dart
+BarcodeScannerWidget(
+  config: ScannerConfig(
+    // Enable detailed logging
+    enableDebugMode: true,
+  ),
+  onError: (error) {
+    print('Detailed error: $error');
+  },
+)
 ```
 
 ## 🏪 OpenFoodFacts Integration
@@ -206,20 +217,6 @@ BarcodeScannerWidget(
 )
 ```
 
-### Debug Information
-
-```dart
-BarcodeScannerWidget(
-  config: ScannerConfig(
-    // Enable detailed logging
-    enableDebugMode: true,
-  ),
-  onError: (error) {
-    print('Detailed error: $error');
-  },
-)
-```
-
 ## 🚨 Troubleshooting
 ### Common Issues
 
@@ -241,6 +238,7 @@ BarcodeScannerWidget(
 ## 📝 License
 
 MIT License - see LICENSE file for details.
+Free for enterprise and commercial use-case
 
 ### Bundled Components
 
@@ -254,12 +252,9 @@ This package includes several bundled components to provide a seamless integrati
 - **Size**: ~12.2MB
 - **Purpose**: Barcode detection AI model for accurate barcode localization
 
-
 #### 2. Weebi Rust Barcode Library (`rust_barcode_lib.dll`)
 
 - **File**: `windows/rust_barcode_lib.dll`
-- **Architecture**: Windows x64
-- **License**: Proprietary (Weebi.com)
 - **Size**: ~2.1MB
 - **Purpose**: High-performance barcode processing and rxing integration
 
@@ -276,9 +271,9 @@ This package includes several bundled components to provide a seamless integrati
 
 When using this package:
 
-1. **Include attribution** in your app credits
+1. **Include weebi attribution** in your app credits
 2. **Respect AGPL-3.0** for the YOLO model
 
-## Support
+## Support && custom use-case
 
 - hello@weebi.com
