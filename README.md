@@ -1,13 +1,12 @@
 # Weebi Barcode Scanner
 
-A Flutter package for barcode scanning (1D & 2D) on __laptop__(Windows and MacOS) powered by YOLO object detection and ZXing decoding.
+A Flutter package for barcode scanning (1D & 2D) on __laptop__(Windows and MacOS) powered by [YOLO](https://arxiv.org/abs/1506.02640) object detection and [ZXing](https://zxing.org/w/decode.jspx) decoding.
 
-This package provides unprecedented support for windows barcode scanning in flutter. The only alternative was focused on QR code through a webview [simple_barcode_scanner](https://pub.dev/packages/simple_barcode_scanner).
+This package provides unprecedented __free support__ for windows barcode scanning. The only free alternative in 2025 only handles QR code through a webview [simple_barcode_scanner](https://pub.dev/packages/simple_barcode_scanner).
 
-Thanks to computer vision barcode detection (yolo) and adequate image enhancement logic (rust pipeline), decoding results are even more accurate than the FFI zxing integration included in [flutter_zxing](https://pub.dev/packages/flutter_zxing).
+Thanks to computer vision and adequate image preprocessing, decoding results are enhanced and superior to raw zxing integration, i.e. [flutter_zxing](https://pub.dev/packages/flutter_zxing).
 
-On Android for privacy-concerned scanning prefer [barcode_scan2](https://pub.dev/packages/barcode_scan2) which wraps zxing java APIs in a more performant way. For non private sensitive use-case go for [mobile_scanner](https://pub.dev/packages/mobile_scanner) which wraps the almighty Google ML Kit barcode.
-
+On Android for privacy-concerned scanning consider [barcode_scan2](https://pub.dev/packages/barcode_scan2) which wraps zxing java APIs in a seamless way. For non private sensitive use-case prefer [mobile_scanner](https://pub.dev/packages/mobile_scanner) which provides the almighty Google ML Kit barcode.
 
 ## Features
 
@@ -15,29 +14,38 @@ On Android for privacy-concerned scanning prefer [barcode_scan2](https://pub.dev
 - **AI-Powered Detection**: YOLO model for accurate barcode localization
 - **Multiple Formats**: QR codes, Code 128, EAN-13, and more
 - **Real-Time Processing**: Live camera feed with detection overlay
-- **OpenFoodFacts Integration**: Automatic product information lookup
+- **OpenFoodFacts Integration**: Automatic product information lookup for demo purposes
+- **macOS Compatible**: Tested and working on macOS Monterey 12.6.5+
 
-## 📁 **Directory Structure Example**
+## Set-up
 
 - yolo model is downloaded at class init 
+- native libs are handled by the package
+- so just add this package in your yaml and run:
 
-```
-your_flutter_app/
-├── windows/
-│   └── rust_barcode_lib.dll               # 10.87 MB (Windows only)
-├── macos/
-│   └── Frameworks/
-│       └── librust_barcode_lib.dylib      # 22 MB (macOS only)
-└── pubspec.yaml
-```
-
-Then run:
 ```bash
 flutter pub get
 ```
 
-## Quick Start
+### Set-up Macos
+**macOS Entitlements**
+- **Files:** 
+  - `your_app/macos/Runner/DebugProfile.entitlements`
+  - `your_app/macos/Runner/Release.entitlements`
 
+```xml
+<key>com.apple.security.device.camera</key>
+<true/>
+```
+**macOS info.plist**
+```xml
+<key>NSCameraUsageDescription</key>
+<string>This app needs camera access to scan barcodes and QR codes.</string>
+<key>NSMicrophoneUsageDescription</key>
+<string>This app needs camera access to scan barcodes and QR codes.</string>
+```
+
+## Quick Start
 
 ```dart
 import 'package:weebi_barcode_scanner/weebi_barcode_scanner.dart';
@@ -119,8 +127,6 @@ BarcodeScannerWidget(
 )
 ```
 
-## 🎯 Scanner Configurations
-
 ### Custom Configuration
 
 ```dart
@@ -142,7 +148,7 @@ ScannerConfig(
 )
 ```
 
-## 📊 BarcodeResult
+### BarcodeResult
 
 ```dart
 class BarcodeResult {
@@ -156,6 +162,20 @@ class BarcodeResult {
   bool get hasProductInfo => productName != null;
   bool get hasLocationInfo => location != null;
 }
+```
+
+### Debug Information
+
+```dart
+BarcodeScannerWidget(
+  config: ScannerConfig(
+    // Enable detailed logging
+    enableDebugMode: true,
+  ),
+  onError: (error) {
+    print('Detailed error: $error');
+  },
+)
 ```
 
 ## 🏪 OpenFoodFacts Integration
@@ -174,7 +194,7 @@ BarcodeScannerWidget(
 )
 ```
 
-To enable full product features, add credentials (optional):
+To enable also price features, add credentials (optional):
 ```bash
 # Copy template and add your credentials
 cp open_prices_credentials.json.example open_prices_credentials.json
@@ -206,41 +226,47 @@ BarcodeScannerWidget(
 )
 ```
 
-### Debug Information
-
-```dart
-BarcodeScannerWidget(
-  config: ScannerConfig(
-    // Enable detailed logging
-    enableDebugMode: true,
-  ),
-  onError: (error) {
-    print('Detailed error: $error');
-  },
-)
-```
-
 ## 🚨 Troubleshooting
 ### Common Issues
 
-1. **Camera not working**
+- **Camera not working**
    - Ensure camera permissions are granted
    - Check that camera is not in use by another app
    - Restart the app if camera appears frozen
 
-2. **Poor detection accuracy**
+- **Poor detection accuracy**
    - Ensure good lighting conditions
    - Try adjusting `confidenceThreshold` (lower = more sensitive)
    - Enable `enableSuperResolution` for damaged barcodes
 
-3. **Performance issues**
+- **Performance issues**
    - Increase `detectionInterval` (less frequent detection)
    - Disable `enableSuperResolution` if not needed
 
+- **Swift Compilation Error Fix**
+**Problem:** `camera_macos` plugin used macOS 14+ APIs that don't exist on macOS Monterey 12.6.5
+```
+error: initializer for conditional binding must have Optional type, not 'Bundle'
+error: value of type 'AVCaptureConnection' has no member 'isVideoRotationAngleSupported'
+```
+
+**Solution:** Commented out problematic lines in the cached plugin file
+**File:** `/Users/mac/.pub-cache/hosted/pub.dev/camera_macos-0.0.9/macos/Classes/CameraMacosPlugin.swift`
+
+**Lines to comment out:**
+```swift
+// Comment out these lines around line 520-530:
+//                                #if compiler(<5.8.1)
+//                                    if #available(macOS 14.0, *), connection.isVideoRotationAngleSupported(self.orientation){
+//                                        connection.videoRotationAngle = self.orientation
+//                                    }
+//                                #endif
+```
 
 ## 📝 License
 
 MIT License - see LICENSE file for details.
+Free for enterprise and commercial use-case
 
 ### Bundled Components
 
@@ -254,12 +280,9 @@ This package includes several bundled components to provide a seamless integrati
 - **Size**: ~12.2MB
 - **Purpose**: Barcode detection AI model for accurate barcode localization
 
-
 #### 2. Weebi Rust Barcode Library (`rust_barcode_lib.dll`)
 
 - **File**: `windows/rust_barcode_lib.dll`
-- **Architecture**: Windows x64
-- **License**: Proprietary (Weebi.com)
 - **Size**: ~2.1MB
 - **Purpose**: High-performance barcode processing and rxing integration
 
@@ -276,9 +299,9 @@ This package includes several bundled components to provide a seamless integrati
 
 When using this package:
 
-1. **Include attribution** in your app credits
+1. **Include weebi attribution** in your app credits
 2. **Respect AGPL-3.0** for the YOLO model
 
-## Support
+## Support && custom use-case
 
 - hello@weebi.com

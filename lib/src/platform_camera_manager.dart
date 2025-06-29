@@ -130,12 +130,25 @@ class MacOSCameraManager extends PlatformCameraManager {
   
   @override
   Future<void> initialize(ScannerConfig config) async {
-    // Note: macOS camera initialization is handled in the widget
-    // This is due to the architecture of camera_macos package
-    debugPrint('✅ macOS camera manager ready for initialization');
+    debugPrint('🔍 MacOSCameraManager: Starting initialization...');
+    
+    try {
+      // Note: macOS camera initialization is handled in the widget
+      // This is due to the architecture of camera_macos package
+      debugPrint('✅ MacOSCameraManager: Ready for widget-based initialization');
+      
+      // For now, we'll simulate successful initialization
+      // The actual camera will be initialized when the widget is built
+      _isInitialized = true;
+      debugPrint('✅ MacOSCameraManager: Initialization completed (simulated)');
+    } catch (e) {
+      debugPrint('❌ MacOSCameraManager: Initialization failed: $e');
+      rethrow;
+    }
   }
   
   void _onCameraInitialized(CameraMacOSController controller) {
+    debugPrint('🔍 MacOSCameraManager: Camera controller initialized');
     _controller = controller;
     _isInitialized = true;
     
@@ -144,7 +157,7 @@ class MacOSCameraManager extends PlatformCameraManager {
       _controller!.setFocusPoint(const Offset(0.5, 0.5));
       debugPrint('✅ macOS: Focus point set to center');
     } catch (e) {
-      debugPrint('macOS focus point setting failed (non-critical): $e');
+      debugPrint('⚠️ macOS focus point setting failed (non-critical): $e');
     }
     
     debugPrint('✅ macOS camera initialized successfully');
@@ -152,31 +165,74 @@ class MacOSCameraManager extends PlatformCameraManager {
   
   @override
   Future<void> dispose() async {
+    debugPrint('🔍 MacOSCameraManager: Disposing...');
     _controller = null;
     _isInitialized = false;
+    debugPrint('✅ MacOSCameraManager: Disposed');
   }
   
   @override
   Future<Uint8List> takePicture() async {
+    debugPrint('🔍 MacOSCameraManager: Taking picture...');
+    
     if (_controller == null || !_isInitialized) {
+      debugPrint('❌ MacOSCameraManager: Camera not initialized for picture');
       throw Exception('macOS camera not initialized');
     }
     
-    final file = await _controller!.takePicture();
-    if (file?.bytes == null) {
-      throw Exception('Failed to capture image on macOS');
+    try {
+      final file = await _controller!.takePicture();
+      if (file?.bytes == null) {
+        debugPrint('❌ MacOSCameraManager: Failed to capture image');
+        throw Exception('Failed to capture image on macOS');
+      }
+      
+      debugPrint('✅ MacOSCameraManager: Picture taken successfully (${file!.bytes!.length} bytes)');
+      return file!.bytes!;
+    } catch (e) {
+      debugPrint('❌ MacOSCameraManager: Picture taking failed: $e');
+      rethrow;
     }
-    
-    return file!.bytes!;
   }
   
   @override
   Widget buildPreviewWidget() {
+    debugPrint('🔍 MacOSCameraManager: Building preview widget...');
+    
+    if (!_isInitialized) {
+      debugPrint('⚠️ MacOSCameraManager: Not initialized, showing loading widget');
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Initializing macOS camera...'),
+          ],
+        ),
+      );
+    }
+    
+    debugPrint('✅ MacOSCameraManager: Building camera preview widget');
+    
+    // For macOS, we need to use the camera_macos widget
     return CameraMacOSView(
       key: _cameraKey,
-      fit: BoxFit.cover,
       cameraMode: CameraMacOSMode.photo,
       onCameraInizialized: _onCameraInitialized,
+      onCameraLoading: (error) {
+        debugPrint('🔍 MacOSCameraManager: Camera loading: $error');
+        return const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Loading macOS camera...'),
+            ],
+          ),
+        );
+      },
     );
   }
   
@@ -184,5 +240,11 @@ class MacOSCameraManager extends PlatformCameraManager {
   bool get isInitialized => _isInitialized;
   
   @override
-  Size? get previewSize => null; // macOS doesn't expose preview size easily
+  Size? get previewSize {
+    if (_controller != null) {
+      // Return a default size for macOS
+      return const Size(640, 480);
+    }
+    return null;
+  }
 } 

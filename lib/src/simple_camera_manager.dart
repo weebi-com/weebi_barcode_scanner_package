@@ -4,6 +4,9 @@ import 'dart:typed_data';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 
+// Platform-specific imports
+import 'package:camera_macos/camera_macos.dart' if (dart.library.html) 'dart:html' as camera_macos;
+
 /// Simple camera manager that mimics the working dart_barcode_old implementation
 class SimpleCameraManager {
   CameraController? controller;
@@ -28,69 +31,13 @@ class SimpleCameraManager {
       
       _isDisposed = false;
       
-      final cameras = await availableCameras();
-      if (cameras.isEmpty) {
-        debugPrint('No cameras available');
-        return null;
-      }
-
-      // Platform-specific camera selection
-      CameraDescription selectedCamera;
-      if (isWindows) {
-        selectedCamera = cameras.first;
-        debugPrint('Windows: Using camera: ${selectedCamera.name}');
+      // Platform-specific camera initialization
+      if (Platform.isMacOS) {
+        // Use camera_macos for macOS
+        return await _initializeMacOSCamera();
       } else {
-        selectedCamera = cameras.firstWhere(
-          (camera) => camera.lensDirection == CameraLensDirection.back,
-          orElse: () => cameras.first,
-        );
-      }
-
-      // Platform-specific resolution settings
-      ResolutionPreset resolution;
-      ImageFormatGroup? imageFormat;
-      
-      if (isWindows) {
-        resolution = ResolutionPreset.high;
-        imageFormat = ImageFormatGroup.bgra8888;
-      } else {
-        resolution = ResolutionPreset.high;
-        imageFormat = Platform.isAndroid 
-            ? ImageFormatGroup.yuv420 
-            : ImageFormatGroup.bgra8888;
-      }
-
-      final newController = CameraController(
-        selectedCamera,
-        resolution,
-        enableAudio: false,
-        imageFormatGroup: imageFormat,
-      );
-
-      final timeout = isWindows ? const Duration(seconds: 15) : const Duration(seconds: 8);
-      
-      await newController.initialize().timeout(
-        timeout,
-        onTimeout: () {
-          debugPrint('Camera initialization timed out (${timeout.inSeconds}s)');
-          throw TimeoutException('Camera initialization timeout', timeout);
-        },
-      );
-      
-      if (!_isDisposed && newController.value.isInitialized) {
-        try {
-          await newController.setFocusMode(FocusMode.auto);
-        } catch (e) {
-          debugPrint('Focus mode setting failed (non-critical): $e');
-        }
-        
-        controller = newController;
-        debugPrint('Camera initialized successfully on ${Platform.operatingSystem}');
-        debugPrint('Camera resolution: ${newController.value.previewSize}');
-        return newController;
-      } else {
-        await newController.dispose();
-        return null;
+        // Use standard camera package for other platforms
+        return await _initializeStandardCamera();
       }
     } catch (e) {
       debugPrint('Error initializing camera: $e');
@@ -117,6 +64,86 @@ class SimpleCameraManager {
       
       return null;
     }
+  }
+
+  Future<CameraController?> _initializeStandardCamera() async {
+    final cameras = await availableCameras();
+    if (cameras.isEmpty) {
+      debugPrint('No cameras available');
+      return null;
+    }
+
+    // Platform-specific camera selection
+    CameraDescription selectedCamera;
+    if (isWindows) {
+      selectedCamera = cameras.first;
+      debugPrint('Windows: Using camera: ${selectedCamera.name}');
+    } else {
+      selectedCamera = cameras.firstWhere(
+        (camera) => camera.lensDirection == CameraLensDirection.back,
+        orElse: () => cameras.first,
+      );
+    }
+
+    // Platform-specific resolution settings
+    ResolutionPreset resolution;
+    ImageFormatGroup? imageFormat;
+    
+    if (isWindows) {
+      resolution = ResolutionPreset.high;
+      imageFormat = ImageFormatGroup.bgra8888;
+    } else {
+      resolution = ResolutionPreset.high;
+      imageFormat = Platform.isAndroid 
+          ? ImageFormatGroup.yuv420 
+          : ImageFormatGroup.bgra8888;
+    }
+
+    final newController = CameraController(
+      selectedCamera,
+      resolution,
+      enableAudio: false,
+      imageFormatGroup: imageFormat,
+    );
+
+    final timeout = isWindows ? const Duration(seconds: 15) : const Duration(seconds: 8);
+    
+    await newController.initialize().timeout(
+      timeout,
+      onTimeout: () {
+        debugPrint('Camera initialization timed out (${timeout.inSeconds}s)');
+        throw TimeoutException('Camera initialization timeout', timeout);
+      },
+    );
+    
+    if (!_isDisposed && newController.value.isInitialized) {
+      try {
+        await newController.setFocusMode(FocusMode.auto);
+      } catch (e) {
+        debugPrint('Focus mode setting failed (non-critical): $e');
+      }
+      
+      controller = newController;
+      debugPrint('Camera initialized successfully on ${Platform.operatingSystem}');
+      debugPrint('Camera resolution: ${newController.value.previewSize}');
+      return newController;
+    } else {
+      await newController.dispose();
+      return null;
+    }
+  }
+
+  Future<CameraController?> _initializeMacOSCamera() async {
+    // For macOS, we need to use a different approach since camera_macos doesn't provide
+    // the same API as the standard camera package. We'll need to implement a macOS-specific
+    // camera controller or use the existing MacOSCameraManager from platform_camera_manager.dart
+    
+    debugPrint('macOS camera initialization - using platform-specific implementation');
+    
+    // For now, return null to indicate that macOS camera is not yet implemented
+    // in this SimpleCameraManager. The BarcodeScannerWidget should use the
+    // PlatformCameraManager.create() method instead.
+    return null;
   }
 
   Future<CameraController?> _retryInitializeCamera() async {

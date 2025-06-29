@@ -35,3 +35,7 @@ example/pubspec.lock
 example/models/
 *.rten
 # Keep lib/src/dart_barcode/src/models/ - these are Dart source files, not model weight files
+example/fix_windows_plugins.ps1
+macos/Flutter/ephemeral/flutter_export_environment.sh
+macos/Flutter/ephemeral/Flutter-Generated.xcconfig
+weebi_openfoodfacts
