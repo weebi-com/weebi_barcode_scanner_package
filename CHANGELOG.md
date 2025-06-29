@@ -1,3 +1,7 @@
+## 1.6.7
+
+- lower dart SDK
+
 ## 1.6.6
 
 - bump weebi_openfoodfacts_service
