@@ -1,6 +1,6 @@
 # Weebi Barcode Scanner
 
-A Flutter package for barcode scanning (1D & 2D) on __laptop__(Windows and MacOS) powered by [YOLO](https://arxiv.org/abs/1506.02640) object detection and [ZXing](https://zxing.org/w/decode.jspx) decoding.
+A Flutter package for barcode scanning (1D & 2D) on __laptop__ (Windows and MacOS) powered by [YOLO](https://arxiv.org/abs/1506.02640) object detection and [ZXing](https://zxing.org/w/decode.jspx) decoding.
 
 This package provides unprecedented __free support__ for windows barcode scanning. The only free alternative in 2025 only handles QR code through a webview [simple_barcode_scanner](https://pub.dev/packages/simple_barcode_scanner).
 
@@ -10,8 +10,8 @@ On Android for privacy-concerned scanning consider [barcode_scan2](https://pub.d
 
 ## Features
 
-- **Cross-Platform**: Windows and macOS support
-- **AI-Powered Detection**: YOLO model for accurate barcode localization
+- **Computer Vision Detection**: YOLO model for accurate barcode localization
+- **Image preprocessing** and enhancement
 - **Multiple Formats**: QR codes, Code 128, EAN-13, and more
 - **Real-Time Processing**: Live camera feed with detection overlay
 - **OpenFoodFacts Integration**: Automatic product information lookup for demo purposes
@@ -280,17 +280,11 @@ This package includes several bundled components to provide a seamless integrati
 - **Size**: ~12.2MB
 - **Purpose**: Barcode detection AI model for accurate barcode localization
 
-#### 2. Weebi Rust Barcode Library (`rust_barcode_lib.dll`)
+#### 2. Weebi Rust Barcode Library (e.g. `rust_barcode_lib.dll`)
 
 - **File**: `windows/rust_barcode_lib.dll`
 - **Size**: ~2.1MB
 - **Purpose**: High-performance barcode processing and rxing integration
-
-##### Features
-- YOLO model inference via RTEN runtime
-- Image preprocessing and enhancement
-- rxing barcode decoding
-- Windows-optimized BGRA8888 image handling
 
 #### 3. Dart FFI Bindings
 
