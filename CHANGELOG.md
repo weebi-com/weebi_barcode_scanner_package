@@ -1,7 +1,14 @@
+## 1.6.6
+
+- bump weebi_openfoodfacts_service
+- no need for credentials for open food fact calling
+- richer integration (beauty facts + products fact) 
+
 ## 1.6.5
 
 - fix windows dll path 
 - UX reworked in simple case 
+- example app refactored to use only the scanner package's API—no direct dependency or import of weebi_openfoodfacts_service.
 
 ## 1.6.4 
 

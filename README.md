@@ -18,21 +18,11 @@ On Android for privacy-concerned scanning consider [barcode_scan2](https://pub.d
 - **macOS Compatible**: Tested and working on macOS Monterey 12.6.5+
 
 ## Set-up
-## 📁 **Directory Structure Example**
 
 - yolo model is downloaded at class init 
+- native libs are handled by the package
+- so just add this package in your yaml and run:
 
-```
-your_flutter_app/
-├── windows/
-│   └── rust_barcode_lib.dll               # 10.87 MB (Windows only)
-├── macos/
-│   └── Frameworks/
-│       └── librust_barcode_lib.dylib      # 22 MB (macOS only)
-└── pubspec.yaml
-```
-
-Then run:
 ```bash
 flutter pub get
 ```
@@ -204,7 +194,7 @@ BarcodeScannerWidget(
 )
 ```
 
-To enable full product features, add credentials (optional):
+To enable also price features, add credentials (optional):
 ```bash
 # Copy template and add your credentials
 cp open_prices_credentials.json.example open_prices_credentials.json
