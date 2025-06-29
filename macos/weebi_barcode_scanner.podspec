@@ -20,18 +20,34 @@ for damaged and low-quality barcodes using a Rust-powered backend.
   }
   spec.swift_version = '5.0'
 
-  # Native library configuration
-  spec.vendored_libraries = 'Frameworks/librust_barcode_lib_*.dylib'
+  # Native library configuration - include all variants
+  spec.vendored_libraries = 'Frameworks/librust_barcode_lib.dylib'
   
-  # Prepare command to select correct architecture
+  # Ensure the universal binary is created
   spec.prepare_command = <<-CMD
-    # Create universal binary for better compatibility
+    echo "Creating universal binary for Rust barcode library..."
+    
+    # Check if we have both architecture-specific libraries
     if [ -f "Frameworks/librust_barcode_lib_x86_64.dylib" ] && [ -f "Frameworks/librust_barcode_lib_aarch64.dylib" ]; then
+      echo "Creating universal binary from x86_64 and aarch64 libraries..."
       lipo -create "Frameworks/librust_barcode_lib_x86_64.dylib" "Frameworks/librust_barcode_lib_aarch64.dylib" -output "Frameworks/librust_barcode_lib.dylib"
+      echo "Universal binary created successfully"
     elif [ -f "Frameworks/librust_barcode_lib_x86_64.dylib" ]; then
+      echo "Using x86_64 library as universal binary..."
       cp "Frameworks/librust_barcode_lib_x86_64.dylib" "Frameworks/librust_barcode_lib.dylib"
     elif [ -f "Frameworks/librust_barcode_lib_aarch64.dylib" ]; then
+      echo "Using aarch64 library as universal binary..."
       cp "Frameworks/librust_barcode_lib_aarch64.dylib" "Frameworks/librust_barcode_lib.dylib"
+    else
+      echo "ERROR: No Rust libraries found in Frameworks directory!"
+      exit 1
+    fi
+    
+    # Fix the install name to use @rpath
+    if [ -f "Frameworks/librust_barcode_lib.dylib" ]; then
+      echo "Fixing install name for universal binary..."
+      install_name_tool -id "@rpath/librust_barcode_lib.dylib" "Frameworks/librust_barcode_lib.dylib"
+      echo "Install name fixed successfully"
     fi
   CMD
 end 

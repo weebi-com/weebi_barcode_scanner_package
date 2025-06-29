@@ -4,6 +4,7 @@ import 'dart:ffi';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:ffi/ffi.dart';
+import 'package:flutter/foundation.dart';
 
 import 'models/barcode_result.dart';
 import 'models/image_format.dart';
@@ -26,19 +27,48 @@ class BarcodeDetector {
   static Future<bool> initialize(String modelFilePath) async {
     if (_initialized) return true;
 
+    debugPrint('🔍 BarcodeDetector: Starting initialization with model: $modelFilePath');
+
     try {
+      debugPrint('🔍 BarcodeDetector: Loading native library...');
       _lib = _loadNativeLibrary();
+      debugPrint('✅ BarcodeDetector: Native library loaded successfully');
+      
+      debugPrint('🔍 BarcodeDetector: Binding FFI functions...');
       _bindFunctions();
+      debugPrint('✅ BarcodeDetector: FFI functions bound successfully');
+      
+      debugPrint('🔍 BarcodeDetector: Checking if model file exists...');
+      final modelFile = File(modelFilePath);
+      if (!await modelFile.exists()) {
+        debugPrint('❌ BarcodeDetector: Model file does not exist: $modelFilePath');
+        return false;
+      }
+      debugPrint('✅ BarcodeDetector: Model file exists (${await modelFile.length()} bytes)');
       
       final pathPointer = modelFilePath.toNativeUtf8();
       try {
+        debugPrint('🔍 BarcodeDetector: Calling Rust SDK init function...');
         final result = _sdkInit(pathPointer.cast<Char>());
+        debugPrint('🔍 BarcodeDetector: Rust SDK init returned: $result');
         _initialized = result == 0; // 0 means success in C
+        
+        if (_initialized) {
+          debugPrint('✅ BarcodeDetector: Initialization successful');
+        } else {
+          debugPrint('❌ BarcodeDetector: Rust SDK init failed (returned $result)');
+        }
+        
         return _initialized;
       } finally {
         malloc.free(pathPointer);
       }
     } catch (e) {
+      debugPrint('❌ BarcodeDetector: Initialization failed with exception: $e');
+      debugPrint('❌ BarcodeDetector: Exception type: ${e.runtimeType}');
+      if (e is ArgumentError) {
+        debugPrint('❌ BarcodeDetector: ArgumentError details: ${e.message}');
+      }
       return false;
     }
   }
@@ -205,7 +235,7 @@ class BarcodeDetector {
     } else if (Platform.isLinux) {
       return 'librust_barcode_lib.so';
     } else if (Platform.isMacOS || Platform.isIOS) {
-      return 'lib_rust_barcode_lib.dylib';
+      return 'librust_barcode_lib.dylib';
     } else {
       throw UnsupportedError('Unsupported platform for FFI library.');
     }
@@ -213,21 +243,65 @@ class BarcodeDetector {
 
   static DynamicLibrary _loadNativeLibrary() {
     final libName = _libraryPath();
+    debugPrint('🔍 BarcodeDetector: Loading library: $libName');
+    
     // For desktop platforms, check development path first
     if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
       final devPath = '../rust-barcode-lib/target/release/$libName';
+      debugPrint('🔍 BarcodeDetector: Checking development path: $devPath');
       if (File(devPath).existsSync()) {
+        debugPrint('✅ BarcodeDetector: Found library at development path');
         return DynamicLibrary.open(devPath);
       }
+      debugPrint('⚠️ BarcodeDetector: Library not found at development path');
     }
-    return DynamicLibrary.open(libName);
+    
+    // For macOS, try to load from the app bundle's Frameworks directory
+    if (Platform.isMacOS) {
+      try {
+        // Try to load from the app bundle's Frameworks directory
+        final frameworksPath = 'Frameworks/$libName';
+        debugPrint('🔍 BarcodeDetector: Trying macOS Frameworks path: $frameworksPath');
+        final library = DynamicLibrary.open(frameworksPath);
+        debugPrint('✅ BarcodeDetector: Library loaded successfully from Frameworks');
+        return library;
+      } catch (e) {
+        debugPrint('⚠️ BarcodeDetector: Failed to load from Frameworks: $e');
+      }
+    }
+    
+    debugPrint('🔍 BarcodeDetector: Loading library from system path: $libName');
+    try {
+      final library = DynamicLibrary.open(libName);
+      debugPrint('✅ BarcodeDetector: Library loaded successfully from system path');
+      return library;
+    } catch (e) {
+      debugPrint('❌ BarcodeDetector: Failed to load library: $e');
+      rethrow;
+    }
   }
 
   static void _bindFunctions() {
-    _processImage = _lib!.lookupFunction<_ProcessImageNative, _ProcessImage>('process_image');
-    _processYuv420Image = _lib!.lookupFunction<_ProcessYuv420ImageNative, _ProcessYuv420Image>('process_yuv420_image');
-    _sdkInit = _lib!.lookupFunction<_SdkInitNative, _SdkInit>('sdk_init');
-    _freeRustString = _lib!.lookupFunction<_FreeRustStringNative, _FreeRustString>('free_rust_string');
+    debugPrint('🔍 BarcodeDetector: Binding FFI functions...');
+    
+    try {
+      _processImage = _lib!.lookupFunction<_ProcessImageNative, _ProcessImage>('process_image');
+      debugPrint('✅ BarcodeDetector: process_image function bound');
+      
+      _processYuv420Image = _lib!.lookupFunction<_ProcessYuv420ImageNative, _ProcessYuv420Image>('process_yuv420_image');
+      debugPrint('✅ BarcodeDetector: process_yuv420_image function bound');
+      
+      _sdkInit = _lib!.lookupFunction<_SdkInitNative, _SdkInit>('sdk_init');
+      debugPrint('✅ BarcodeDetector: sdk_init function bound');
+      
+      _freeRustString = _lib!.lookupFunction<_FreeRustStringNative, _FreeRustString>('free_rust_string');
+      debugPrint('✅ BarcodeDetector: free_rust_string function bound');
+      
+      debugPrint('✅ BarcodeDetector: All FFI functions bound successfully');
+    } catch (e) {
+      debugPrint('❌ BarcodeDetector: Failed to bind FFI functions: $e');
+      rethrow;
+    }
   }
 }
 

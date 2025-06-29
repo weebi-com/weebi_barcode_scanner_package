@@ -28,7 +28,7 @@ SPEC CHECKSUMS:
   camera_macos: c2603f5eed16f05076cf17e12030d2ce55a77839
   FlutterMacOS: 8f6f14fa908a6fb3fba0cd85dbd81ec4b251fb24
   path_provider_foundation: 2b6b4c569c0fb62ec74538f866245ac84301af46
-  weebi_barcode_scanner: 3bb77bd5569fa9a9b553977bd82133edfe6017cb
+  weebi_barcode_scanner: 6ee7d4e6aff615dcd5422dfa5069dabe6ec158c9
 
 PODFILE CHECKSUM: 7eb978b976557c8c1cd717d8185ec483fd090a82
 

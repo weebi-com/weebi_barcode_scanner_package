@@ -23,6 +23,7 @@ dependencies:
   # Camera and image processing 
   camera: ^0.11.1
   camera_windows: ^0.2.6+2
+  camera_macos: ^0.0.9
   image: ^4.0.17
   path_provider: ^2.0.15
   path: ^1.8.3

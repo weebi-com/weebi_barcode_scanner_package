@@ -15,7 +15,9 @@ On Android for privacy-concerned scanning consider [barcode_scan2](https://pub.d
 - **Multiple Formats**: QR codes, Code 128, EAN-13, and more
 - **Real-Time Processing**: Live camera feed with detection overlay
 - **OpenFoodFacts Integration**: Automatic product information lookup for demo purposes
+- **macOS Compatible**: Tested and working on macOS Monterey 12.6.5+
 
+## Set-up
 ## 📁 **Directory Structure Example**
 
 - yolo model is downloaded at class init 
@@ -35,8 +37,25 @@ Then run:
 flutter pub get
 ```
 
-## Quick Start
+### Set-up Macos
+**macOS Entitlements**
+- **Files:** 
+  - `your_app/macos/Runner/DebugProfile.entitlements`
+  - `your_app/macos/Runner/Release.entitlements`
 
+```xml
+<key>com.apple.security.device.camera</key>
+<true/>
+```
+**macOS info.plist**
+```xml
+<key>NSCameraUsageDescription</key>
+<string>This app needs camera access to scan barcodes and QR codes.</string>
+<key>NSMicrophoneUsageDescription</key>
+<string>This app needs camera access to scan barcodes and QR codes.</string>
+```
+
+## Quick Start
 
 ```dart
 import 'package:weebi_barcode_scanner/weebi_barcode_scanner.dart';
@@ -220,20 +239,39 @@ BarcodeScannerWidget(
 ## 🚨 Troubleshooting
 ### Common Issues
 
-1. **Camera not working**
+- **Camera not working**
    - Ensure camera permissions are granted
    - Check that camera is not in use by another app
    - Restart the app if camera appears frozen
 
-2. **Poor detection accuracy**
+- **Poor detection accuracy**
    - Ensure good lighting conditions
    - Try adjusting `confidenceThreshold` (lower = more sensitive)
    - Enable `enableSuperResolution` for damaged barcodes
 
-3. **Performance issues**
+- **Performance issues**
    - Increase `detectionInterval` (less frequent detection)
    - Disable `enableSuperResolution` if not needed
 
+- **Swift Compilation Error Fix**
+**Problem:** `camera_macos` plugin used macOS 14+ APIs that don't exist on macOS Monterey 12.6.5
+```
+error: initializer for conditional binding must have Optional type, not 'Bundle'
+error: value of type 'AVCaptureConnection' has no member 'isVideoRotationAngleSupported'
+```
+
+**Solution:** Commented out problematic lines in the cached plugin file
+**File:** `/Users/mac/.pub-cache/hosted/pub.dev/camera_macos-0.0.9/macos/Classes/CameraMacosPlugin.swift`
+
+**Lines to comment out:**
+```swift
+// Comment out these lines around line 520-530:
+//                                #if compiler(<5.8.1)
+//                                    if #available(macOS 14.0, *), connection.isVideoRotationAngleSupported(self.orientation){
+//                                        connection.videoRotationAngle = self.orientation
+//                                    }
+//                                #endif
+```
 
 ## 📝 License
 

@@ -8,7 +8,7 @@ import 'dart_barcode/weebi_barcode_dart.dart' as core_barcode;
 
 import 'barcode_result.dart';
 import 'scanner_config.dart';
-import 'simple_camera_manager.dart';
+import 'platform_camera_manager.dart';
 
 /// Simple barcode scanner widget for Windows
 /// 
@@ -53,7 +53,7 @@ class BarcodeScannerWidget extends StatefulWidget {
 }
 
 class _BarcodeScannerWidgetState extends State<BarcodeScannerWidget> with WidgetsBindingObserver {
-  final SimpleCameraManager _cameraManager = SimpleCameraManager();
+  final PlatformCameraManager _cameraManager = PlatformCameraManager.create();
   bool _detectorInitialized = false;
   BarcodeResult? _latestBarcode;
   DateTime? _lastDetectionTime;
@@ -102,12 +102,8 @@ class _BarcodeScannerWidgetState extends State<BarcodeScannerWidget> with Widget
     if (state == AppLifecycleState.paused) {
       _stopScanning();
     } else if (state == AppLifecycleState.resumed && !_isDisposing) {
-      // Give a longer delay for Windows after resuming
-      final delay = _cameraManager.isWindows 
-          ? const Duration(milliseconds: 1000)
-          : const Duration(milliseconds: 500);
-      
-      Future.delayed(delay, () {
+      // Give a delay after resuming
+      Future.delayed(const Duration(milliseconds: 500), () {
         if (!_isDisposing) {
           _initializeScanner();
         }
@@ -166,7 +162,12 @@ class _BarcodeScannerWidgetState extends State<BarcodeScannerWidget> with Widget
   }
 
   Future<void> _initializeScanner() async {
-    if (_isInitializing || _isDisposing) return;
+    if (_isInitializing || _isDisposing) {
+      debugPrint('🔍 BarcodeScannerWidget: Already initializing or disposing, skipping');
+      return;
+    }
+
+    debugPrint('🔍 BarcodeScannerWidget: Starting scanner initialization...');
 
     setState(() {
       _isInitializing = true;
@@ -176,15 +177,23 @@ class _BarcodeScannerWidgetState extends State<BarcodeScannerWidget> with Widget
     });
 
     try {
+      debugPrint('🔍 BarcodeScannerWidget: Initializing camera manager...');
+      
       // Initialize camera with enhanced disposal handling
-      final controller = await _cameraManager.initializeCamera();
-      if (controller == null || _isDisposing) {
+      await _cameraManager.initialize(widget.config);
+      
+      debugPrint('🔍 BarcodeScannerWidget: Camera manager initialized, checking if ready...');
+      
+      if (!_cameraManager.isInitialized || _isDisposing) {
+        debugPrint('❌ BarcodeScannerWidget: Camera manager not initialized properly');
         setState(() {
           _error = 'Failed to initialize camera';
           _isInitializing = false;
         });
         return;
       }
+
+      debugPrint('✅ BarcodeScannerWidget: Camera initialized successfully');
 
       setState(() {
         _initializationProgress = 0.3;
@@ -193,6 +202,7 @@ class _BarcodeScannerWidgetState extends State<BarcodeScannerWidget> with Widget
 
       // Initialize barcode detector with auto-download if not already done
       if (!core_barcode.BarcodeDetector.isInitialized) {
+        debugPrint('🔍 BarcodeScannerWidget: Initializing barcode detector...');
         try {
           await core_barcode.BarcodeDetector.initializeOrDownload(
             widget.config.modelPath,
@@ -205,7 +215,9 @@ class _BarcodeScannerWidgetState extends State<BarcodeScannerWidget> with Widget
               }
             },
           );
+          debugPrint('✅ BarcodeScannerWidget: Barcode detector initialized');
         } catch (e) {
+          debugPrint('❌ BarcodeScannerWidget: Barcode detector initialization failed: $e');
           setState(() {
             _error = 'Failed to initialize barcode detector: $e';
             _isInitializing = false;
@@ -213,6 +225,7 @@ class _BarcodeScannerWidgetState extends State<BarcodeScannerWidget> with Widget
           return;
         }
       } else {
+        debugPrint('✅ BarcodeScannerWidget: Barcode detector already initialized');
         setState(() {
           _initializationProgress = 1.0;
           _initializationStatus = 'Model already loaded';
@@ -221,6 +234,7 @@ class _BarcodeScannerWidgetState extends State<BarcodeScannerWidget> with Widget
       _detectorInitialized = true;
 
       if (!_isDisposing) {
+        debugPrint('✅ BarcodeScannerWidget: Scanner initialization completed successfully');
         setState(() {
           _isInitializing = false;
         });
@@ -228,12 +242,13 @@ class _BarcodeScannerWidgetState extends State<BarcodeScannerWidget> with Widget
         // Start scanning after a short delay
         await Future.delayed(const Duration(milliseconds: 200));
         if (!_isDisposing) {
+          debugPrint('🔍 BarcodeScannerWidget: Starting scanning...');
           _startScanning();
         }
       }
     } catch (e) {
       if (!_isDisposing) {
-        debugPrint('Error initializing scanner: $e');
+        debugPrint('❌ BarcodeScannerWidget: Error initializing scanner: $e');
         setState(() {
           _error = 'Camera initialization failed: $e';
           _isInitializing = false;
@@ -247,26 +262,14 @@ class _BarcodeScannerWidgetState extends State<BarcodeScannerWidget> with Widget
 
     _isScanning = true;
     
-    // Windows uses timer-based scanning with camera snapshots
-    if (_cameraManager.isWindows) {
-      _scanTimer = Timer.periodic(const Duration(milliseconds: 600), (timer) {
-        if (!_isScanning || _isDisposing) {
-          timer.cancel();
-          return;
-        }
-        _processWindowsFrame();
-      });
-    } else {
-      // Mobile platforms can use image streams (not implemented in this simplified version)
-      // For now, also use timer-based approach
-      _scanTimer = Timer.periodic(const Duration(milliseconds: 400), (timer) {
-        if (!_isScanning || _isDisposing) {
-          timer.cancel();
-          return;
-        }
-        _processWindowsFrame();
-      });
-    }
+    // Use timer-based scanning for all platforms
+    _scanTimer = Timer.periodic(const Duration(milliseconds: 500), (timer) {
+      if (!_isScanning || _isDisposing) {
+        timer.cancel();
+        return;
+      }
+      _processFrame();
+    });
   }
 
   Future<void> _stopScanning() async {
@@ -275,12 +278,12 @@ class _BarcodeScannerWidgetState extends State<BarcodeScannerWidget> with Widget
     _scanTimer = null;
   }
 
-  Future<void> _processWindowsFrame() async {
+  Future<void> _processFrame() async {
     if (_isDisposing || !_detectorInitialized || !_cameraManager.isInitialized) return;
 
     try {
       final imageBytes = await _cameraManager.takePicture();
-      if (imageBytes == null || _isDisposing) return;
+      if (imageBytes.isEmpty || _isDisposing) return;
 
       final results = await core_barcode.BarcodeDetector.processImage(
         format: core_barcode.ImageFormat.jpeg,
@@ -329,20 +332,16 @@ class _BarcodeScannerWidgetState extends State<BarcodeScannerWidget> with Widget
       // Stop current scanning
       _stopScanning();
       
-      // Force dispose camera for hot reload with longer delays
-      await _cameraManager.forceDispose();
+      // Dispose camera for hot reload
+      await _cameraManager.dispose();
       
       // Reset detector state
       _detectorInitialized = false;
       _latestBarcode = null;
       _lastDetectionTime = null;
       
-      // Windows needs extra time for hot reload
-      if (_cameraManager.isWindows) {
-        await Future.delayed(const Duration(milliseconds: 1500));
-      } else {
-        await Future.delayed(const Duration(milliseconds: 500));
-      }
+      // Wait for cleanup
+      await Future.delayed(const Duration(milliseconds: 500));
       
       // Reinitialize
       if (!_isDisposing) {
@@ -465,43 +464,7 @@ class _BarcodeScannerWidgetState extends State<BarcodeScannerWidget> with Widget
   }
 
   Widget _buildCameraPreview(BuildContext context) {
-    final controller = _cameraManager.controller!;
-    final size = MediaQuery.of(context).size;
-    final previewSize = controller.value.previewSize!;
-    
-    // Calculate scaling to fill the screen while maintaining aspect ratio
-    final screenRatio = size.width / size.height;
-    final previewRatio = previewSize.width / previewSize.height;
-    
-    late final double scale;
-    if (screenRatio > previewRatio) {
-      // Screen is wider than preview, scale to fill height
-      scale = size.height / previewSize.height;
-    } else {
-      // Screen is taller than preview, scale to fill width
-      scale = size.width / previewSize.width;
-    }
-
-    return Container(
-      width: size.width,
-      height: size.height,
-      color: Colors.black,
-      child: ClipRect(
-        child: Transform.scale(
-          scale: scale,
-          child: Center(
-            child: Platform.isWindows
-                ? Transform(
-                    alignment: Alignment.center,
-                    // Flip horizontally to correct mirror effect for Windows cameras
-                    transform: Matrix4.identity()..scale(-1.0, 1.0, 1.0),
-                    child: CameraPreview(controller),
-                  )
-                : CameraPreview(controller),
-          ),
-        ),
-      ),
-    );
+    return _cameraManager.buildPreviewWidget();
   }
 }
 
