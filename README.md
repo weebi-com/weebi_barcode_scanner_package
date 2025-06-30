@@ -159,7 +159,7 @@ class BarcodeResult {
   final Map<String, dynamic>? location; // Barcode location in image
   final double? confidence;             // Detection confidence (0.0-1.0)
   
-  bool get hasProductInfo => productName != null;
+  bool get hasProductInfo => product != null;
   bool get hasLocationInfo => location != null;
 }
 ```

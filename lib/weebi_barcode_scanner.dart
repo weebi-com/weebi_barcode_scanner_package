@@ -33,27 +33,57 @@ class WeebiBarcodeScannerAPI {
 
   /// Fetch product info by barcode (food, beauty, or general)
   static Future<WeebiProduct?> fetchProduct(String barcode) async {
-    // Try food first, then beauty, then general
+    // Get current configuration to respect enabled features
+    final features = getAvailableFeatures();
+    final enableBeautyProducts = features['beauty_products'] ?? true;
+    final enableGeneralProducts = features['general_products'] ?? true;
+    
+    // Try food first (always enabled)
     final food = await WeebiOpenFoodFactsService.getProduct(barcode);
     if (food != null) return food;
     
-    final beauty = await WeebiOpenFoodFactsService.getBeautyProduct(barcode);
-    if (beauty != null) return beauty;
+    // Try beauty products only if enabled
+    if (enableBeautyProducts) {
+      final beauty = await WeebiOpenFoodFactsService.getBeautyProduct(barcode);
+      if (beauty != null) return beauty;
+    }
     
-    return await WeebiOpenFoodFactsService.getGeneralProduct(barcode);
+    // Try general products only if enabled
+    if (enableGeneralProducts) {
+      return await WeebiOpenFoodFactsService.getGeneralProduct(barcode);
+    }
+    
+    // No product found and no additional categories enabled
+    return null;
   }
 
   /// Fetch food product only
   static Future<WeebiProduct?> fetchFoodProduct(String barcode) =>
       WeebiOpenFoodFactsService.getProduct(barcode);
 
-  /// Fetch beauty product only
-  static Future<WeebiProduct?> fetchBeautyProduct(String barcode) =>
-      WeebiOpenFoodFactsService.getBeautyProduct(barcode);
+  /// Fetch beauty product only (returns null if beauty products are disabled)
+  static Future<WeebiProduct?> fetchBeautyProduct(String barcode) async {
+    final features = getAvailableFeatures();
+    final enableBeautyProducts = features['beauty_products'] ?? true;
+    
+    if (!enableBeautyProducts) {
+      return null; // Feature disabled
+    }
+    
+    return await WeebiOpenFoodFactsService.getBeautyProduct(barcode);
+  }
 
-  /// Fetch general product only
-  static Future<WeebiProduct?> fetchGeneralProduct(String barcode) =>
-      WeebiOpenFoodFactsService.getGeneralProduct(barcode);
+  /// Fetch general product only (returns null if general products are disabled)
+  static Future<WeebiProduct?> fetchGeneralProduct(String barcode) async {
+    final features = getAvailableFeatures();
+    final enableGeneralProducts = features['general_products'] ?? true;
+    
+    if (!enableGeneralProducts) {
+      return null; // Feature disabled
+    }
+    
+    return await WeebiOpenFoodFactsService.getGeneralProduct(barcode);
+  }
 
   /// Get available OpenFoodFacts features
   static Map<String, bool> getAvailableFeatures() =>

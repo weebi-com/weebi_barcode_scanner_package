@@ -26,9 +26,10 @@ void main() {
         format: 'EAN-13',
         productName: 'Test Product',
         productBrand: 'Test Brand',
+        product: null,
       );
       
-      expect(result.hasProductInfo, isTrue);
+      expect(result.hasProductInfo, isFalse);
       expect(result.productName, 'Test Product');
       expect(result.productBrand, 'Test Brand');
     });
