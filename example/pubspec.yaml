@@ -41,13 +41,9 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
-  # Example of proper asset setup for weebi_barcode_scanner package
-  # These assets must be provided by the consuming application
+  # Model is now downloaded automatically - no need to bundle in assets
+  # The scanner will automatically download the model from Hugging Face on first use
   assets:
-    # REQUIRED: YOLO barcode detection model (11.68 MB)
-    # Download from: https://huggingface.co/weebi/weebi_barcode_detector/blob/main/best.rten
-    # License: AGPL-3.0 (requires attribution)
-    - assets/best.rten
     
     # PLATFORM-SPECIFIC: Include only what you need
     # Windows (10.87 MB)

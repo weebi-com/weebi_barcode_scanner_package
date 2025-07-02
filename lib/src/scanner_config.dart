@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 /// Configuration for the barcode scanner
 class ScannerConfig {
   /// Path to the YOLO model file (best.rten)
-  /// Defaults to 'assets/best.rten'
-  final String modelPath;
+  /// If null, uses default location in app documents with auto-download
+  /// If specified, must be a valid file path (will auto-download if missing)
+  final String? modelPath;
   
   /// Whether to use super resolution for better 1D barcode reading
   /// Improves accuracy for damaged or low-quality barcodes
@@ -51,7 +52,7 @@ class ScannerConfig {
   final bool enableContinuousAutoFocus;
 
   const ScannerConfig({
-    this.modelPath = 'assets/best.rten',
+    this.modelPath,
     this.useSuperResolution = true,
     this.enableProductLookup = true,
     this.showOverlay = true,
@@ -69,7 +70,7 @@ class ScannerConfig {
   
   /// Continuous scanning mode - allows multiple scans, same product can be scanned multiple times
   const ScannerConfig.continuous({
-    this.modelPath = 'assets/best.rten',
+    this.modelPath,
     this.useSuperResolution = true,
     this.enableProductLookup = true,
     this.showOverlay = true,
@@ -87,7 +88,7 @@ class ScannerConfig {
   
   /// Point-of-sale mode - optimized for quick single scans with immediate feedback
   const ScannerConfig.pointOfSale({
-    this.modelPath = 'assets/best.rten',
+    this.modelPath,
     this.useSuperResolution = true,
     this.enableProductLookup = true, // Keep enabled for product info display
     this.showOverlay = true,

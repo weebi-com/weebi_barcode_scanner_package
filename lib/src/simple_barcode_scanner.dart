@@ -1,10 +1,158 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:weebi_barcode_dart/weebi_barcode_dart.dart' as core;
 
 import 'barcode_result.dart';
 import 'barcode_scanner_widget.dart';
 import 'scanner_config.dart';
+
+/// Simple barcode scanner API with automatic model management
+/// 
+/// This class provides the easiest way to integrate barcode scanning:
+/// - Automatically downloads the YOLO model from Hugging Face if needed
+/// - Handles all initialization and error management
+/// - Provides a simple Widget for scanning
+/// 
+/// Example usage:
+/// ```dart
+/// // Basic usage with default settings
+/// SimpleBarcodeScanner(
+///   onBarcodeDetected: (barcode) {
+///     print('Scanned: ${barcode.text}');
+///   },
+/// )
+/// 
+/// // With custom model path
+/// SimpleBarcodeScanner(
+///   modelPath: '/custom/path/to/model.rten',
+///   onBarcodeDetected: (barcode) {
+///     print('Scanned: ${barcode.text}');
+///   },
+/// )
+/// ```
+class SimpleBarcodeScanner extends StatelessWidget {
+  /// Callback when a barcode is detected
+  final Function(BarcodeResult) onBarcodeDetected;
+  
+  /// Optional custom model path
+  /// If null, uses default location with auto-download
+  final String? modelPath;
+  
+  /// Scanner configuration
+  final ScannerConfig? config;
+  
+  /// Error callback
+  final Function(String)? onError;
+  
+  /// Loading widget while initializing
+  final Widget? loadingWidget;
+
+  const SimpleBarcodeScanner({
+    super.key,
+    required this.onBarcodeDetected,
+    this.modelPath,
+    this.config,
+    this.onError,
+    this.loadingWidget,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // Create config with custom model path if provided
+    final finalConfig = config?.copyWith(modelPath: modelPath) ?? 
+                       ScannerConfig(modelPath: modelPath);
+    
+    return BarcodeScannerWidget(
+      onBarcodeDetected: onBarcodeDetected,
+      config: finalConfig,
+      onError: onError,
+      loadingWidget: loadingWidget,
+    );
+  }
+}
+
+/// Extension to add copyWith method to ScannerConfig
+extension ScannerConfigExtension on ScannerConfig {
+  ScannerConfig copyWith({
+    String? modelPath,
+    bool? useSuperResolution,
+    bool? enableProductLookup,
+    bool? showOverlay,
+    bool? showStatusOverlay,
+    Color? overlayColor,
+    Duration? scanInterval,
+    Duration? timeout,
+    bool? enableImageEnhancement,
+    bool? enablePreprocessing,
+    bool? debugMode,
+    bool? scanOnce,
+    bool? enableHapticFeedback,
+    bool? enableContinuousAutoFocus,
+  }) {
+    return ScannerConfig(
+      modelPath: modelPath ?? this.modelPath,
+      useSuperResolution: useSuperResolution ?? this.useSuperResolution,
+      enableProductLookup: enableProductLookup ?? this.enableProductLookup,
+      showOverlay: showOverlay ?? this.showOverlay,
+      showStatusOverlay: showStatusOverlay ?? this.showStatusOverlay,
+      overlayColor: overlayColor ?? this.overlayColor,
+      scanInterval: scanInterval ?? this.scanInterval,
+      timeout: timeout ?? this.timeout,
+      enableImageEnhancement: enableImageEnhancement ?? this.enableImageEnhancement,
+      enablePreprocessing: enablePreprocessing ?? this.enablePreprocessing,
+      debugMode: debugMode ?? this.debugMode,
+      scanOnce: scanOnce ?? this.scanOnce,
+      enableHapticFeedback: enableHapticFeedback ?? this.enableHapticFeedback,
+      enableContinuousAutoFocus: enableContinuousAutoFocus ?? this.enableContinuousAutoFocus,
+    );
+  }
+}
+
+/// Static methods for advanced usage
+class BarcodeScanner {
+  /// Initialize the barcode detector with automatic model download
+  /// 
+  /// This method automatically downloads the YOLO model from Hugging Face
+  /// if it's not found locally. By default, it stores the model in the
+  /// app's documents directory.
+  /// 
+  /// Parameters:
+  /// - [modelPath]: Custom path for the model file. If null, uses default location.
+  /// 
+  /// Throws:
+  /// - [Exception] if model download fails or initialization fails
+  /// 
+  /// Example:
+  /// ```dart
+  /// // Use default location
+  /// await BarcodeScanner.initialize();
+  /// 
+  /// // Use custom path
+  /// await BarcodeScanner.initialize('/custom/path/to/model.rten');
+  /// ```
+  static Future<void> initialize([String? modelPath]) async {
+    await core.BarcodeDetector.initializeOrDownload(modelPath);
+  }
+  
+  /// Check if the scanner is initialized
+  static bool get isInitialized => core.BarcodeDetector.isInitialized;
+  
+  /// Get the default model path
+  static Future<String> getDefaultModelPath() async {
+    return await core.ModelManager.getDefaultModelPath();
+  }
+  
+  /// Check if model exists at path
+  static bool modelExists(String path) {
+    return core.ModelManager.modelExists(path);
+  }
+  
+  /// Download model to specific path
+  static Future<void> downloadModel(String path) async {
+    await core.ModelManager.downloadModel(path);
+  }
+}
 
 /// Simple barcode scanner API similar to barcode_scan2
 /// 
