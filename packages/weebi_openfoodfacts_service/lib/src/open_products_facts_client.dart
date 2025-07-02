@@ -58,10 +58,10 @@ class OpenProductsFactsClient {
     }
   }
   
-  /// Convert OpenProductsFacts API response to WeebiProduct
-  WeebiProduct? convertToWeebiProduct(
+  /// Convert OpenProductsFacts API response to OFFProduct
+  OFFProduct? convertToWeebiProduct(
     Map<String, dynamic> productData,
-    WeebiLanguage language,
+    AppLanguage language,
   ) {
     try {
       // Extract basic information
@@ -92,9 +92,9 @@ class OpenProductsFactsClient {
       final imageUrl = productData['image_front_url'] ?? productData['image_url'];
       final ingredientsImageUrl = productData['image_ingredients_url'];
       
-      return WeebiProduct(
-        barcode: barcode,
-        productType: WeebiProductType.general,
+              return OFFProduct(
+          barcode: barcode,
+          productType: OFFProductType.general,
         name: name,
         brand: brand,
         ingredients: ingredients,

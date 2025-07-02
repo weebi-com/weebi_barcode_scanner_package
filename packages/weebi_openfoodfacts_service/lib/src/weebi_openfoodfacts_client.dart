@@ -5,7 +5,7 @@ import 'models/cache_config.dart';
 import 'models/weebi_product.dart';
 import 'language_manager.dart';
 import 'product_cache_manager.dart';
-import 'image_cache_manager.dart';
+
 import 'open_prices_client.dart';
 import 'open_beauty_facts_client.dart';
 import 'open_products_facts_client.dart';
@@ -21,7 +21,7 @@ class WeebiOpenFoodFactsService {
   static bool _initialized = false;
   static late LanguageManager _languageManager;
   static late ProductCacheManager _productCacheManager;
-  static late ImageCacheManager _imageCacheManager;
+
   static late OpenPricesClient _openPricesClient;
   static late OpenBeautyFactsClient _openBeautyFactsClient;
   static late OpenProductsFactsClient _openProductsFactsClient;
@@ -41,7 +41,7 @@ class WeebiOpenFoodFactsService {
   static Future<void> initialize({
     required String appName,
     String? appUrl,
-    List<WeebiLanguage> preferredLanguages = const [WeebiLanguage.english],
+    List<AppLanguage> preferredLanguages = const [AppLanguage.english],
     CacheConfig cacheConfig = CacheConfig.production,
     bool enablePricing = true,
     bool enableBeautyProducts = true,
@@ -72,10 +72,7 @@ class WeebiOpenFoodFactsService {
       await _productCacheManager.initialize();
     }
     
-    if (cacheConfig.enableImageCache) {
-      _imageCacheManager = ImageCacheManager(cacheConfig);
-      await _imageCacheManager.initialize();
-    }
+
 
     // Load credentials only if pricing is enabled
     if (_enablePricing && autoLoadCredentials) {
@@ -211,7 +208,7 @@ class WeebiOpenFoodFactsService {
 
   /// Get product information with multi-language support, caching, and pricing data
   /// Currently supports OpenFoodFacts (food products)
-  static Future<WeebiProduct?> getProduct(
+  static Future<OFFProduct?> getProduct(
     String barcode, {
     bool includePricing = true,
     String? location,
@@ -282,10 +279,10 @@ class WeebiOpenFoodFactsService {
             pricingData = await _fetchPricingData(barcode, location: location);
           }
           
-          final weebiProduct = WeebiProduct.fromOpenFoodFacts(
+          final weebiProduct = OFFProduct.fromOpenFoodFacts(
             result.product!, 
             language, 
-            WeebiProductType.food, // Currently only food products
+            OFFProductType.food, // Currently only food products
             currentPrice: pricingData?['currentPrice'],
             recentPrices: pricingData?['recentPrices'] ?? [],
             priceStats: pricingData?['priceStats'],
@@ -358,12 +355,12 @@ class WeebiOpenFoodFactsService {
   }
 
   /// Get food product (alias for getProduct - current implementation)
-  static Future<WeebiProduct?> getFoodProduct(String barcode, {String? location}) {
+  static Future<OFFProduct?> getFoodProduct(String barcode, {String? location}) {
     return getProduct(barcode, location: location);
   }
 
   /// Get beauty product from OpenBeautyFacts
-  static Future<WeebiProduct?> getBeautyProduct(String barcode) async {
+  static Future<OFFProduct?> getBeautyProduct(String barcode) async {
     if (!_initialized) {
       throw StateError('WeebiOpenFoodFactsService not initialized. Call initialize() first.');
     }
@@ -382,7 +379,7 @@ class WeebiOpenFoodFactsService {
     // Check cache first
     if (_cacheConfig.enableProductCache) {
       final cachedProduct = await _productCacheManager.getProduct(barcode);
-      if (cachedProduct != null && cachedProduct.productType == WeebiProductType.beauty) {
+      if (cachedProduct != null && cachedProduct.productType == OFFProductType.beauty) {
         debugPrint('Beauty product found in cache: $barcode');
         return cachedProduct;
       }
@@ -423,7 +420,7 @@ class WeebiOpenFoodFactsService {
   }
 
   /// Search beauty products
-  static Future<List<WeebiProduct>> searchBeautyProducts({
+  static Future<List<OFFProduct>> searchBeautyProducts({
     String? query,
     String? brand,
     String? category,
@@ -446,7 +443,7 @@ class WeebiOpenFoodFactsService {
         limit: limit,
       );
 
-      final weebiProducts = <WeebiProduct>[];
+              final weebiProducts = <OFFProduct>[];
       for (final productData in beautyProducts) {
         final weebiProduct = _openBeautyFactsClient.convertToWeebiProduct(
           productData,
@@ -486,7 +483,7 @@ class WeebiOpenFoodFactsService {
   }
 
   /// Get product with pricing data specifically
-  static Future<WeebiProduct?> getProductWithPricing(
+  static Future<OFFProduct?> getProductWithPricing(
     String barcode, {
     String? location,
   }) {
@@ -494,7 +491,7 @@ class WeebiOpenFoodFactsService {
   }
 
   /// Get product without pricing data (faster)
-  static Future<WeebiProduct?> getProductBasic(String barcode) {
+  static Future<OFFProduct?> getProductBasic(String barcode) {
     return getProduct(barcode, includePricing: false);
   }
 
@@ -664,7 +661,7 @@ class WeebiOpenFoodFactsService {
         await _productCacheManager.clearCache();
       }
       if (_cacheConfig.enableImageCache) {
-        await _imageCacheManager.clearCache();
+        // Image cache removed for simplification
       }
       debugPrint('All caches cleared');
     }
@@ -684,7 +681,7 @@ class WeebiOpenFoodFactsService {
         : {'count': 0, 'size': 0};
 
     final imageStats = _cacheConfig.enableImageCache
-        ? await _imageCacheManager.getCacheStats()
+        ? <String, dynamic>{'count': 0, 'size': 0}
         : {'count': 0, 'size': 0};
 
     return {
@@ -749,9 +746,9 @@ Basic product information works without credentials.
   }
 
   /// Get general product information by barcode
-  static Future<WeebiProduct?> getGeneralProduct(
+  static Future<OFFProduct?> getGeneralProduct(
     String barcode, {
-    WeebiLanguage language = WeebiLanguage.english,
+    AppLanguage language = AppLanguage.english,
   }) async {
     if (!_initialized) {
       throw StateError('WeebiOpenFoodFactsService not initialized. Call initialize() first.');
@@ -780,11 +777,11 @@ Basic product information works without credentials.
   }
 
   /// Search general products
-  static Future<List<WeebiProduct>> searchGeneralProducts({
+  static Future<List<OFFProduct>> searchGeneralProducts({
     String? query,
     String? brand,
     String? category,
-    WeebiLanguage language = WeebiLanguage.english,
+    AppLanguage language = AppLanguage.english,
     int limit = 20,
   }) async {
     if (!_initialized) {
@@ -807,7 +804,7 @@ Basic product information works without credentials.
       return productsData
           .map((data) => _openProductsFactsClient.convertToWeebiProduct(data, language))
           .where((product) => product != null)
-          .cast<WeebiProduct>()
+                      .cast<OFFProduct>()
           .toList();
     } catch (e) {
       debugPrint('❌ Error searching general products: $e');

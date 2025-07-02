@@ -41,17 +41,17 @@ void main() {
 
   group('WeebiLanguage', () {
     test('converts language codes correctly', () {
-      expect(WeebiLanguage.fromCode('en'), WeebiLanguage.english);
-      expect(WeebiLanguage.fromCode('fr'), WeebiLanguage.french);
-      expect(WeebiLanguage.fromCode('es'), WeebiLanguage.spanish);
-      expect(WeebiLanguage.fromCode('invalid'), null);
+      expect(AppLanguage.fromCode('en'), AppLanguage.english);
+      expect(AppLanguage.fromCode('fr'), AppLanguage.french);
+      expect(AppLanguage.fromCode('es'), AppLanguage.spanish);
+      expect(AppLanguage.fromCode('invalid'), null);
     });
 
     test('provides correct language properties', () {
-      expect(WeebiLanguage.english.code, 'en');
-      expect(WeebiLanguage.french.code, 'fr');
-      expect(WeebiLanguage.english.displayName, 'English');
-      expect(WeebiLanguage.french.displayName, 'Français');
+      expect(AppLanguage.english.code, 'en');
+      expect(AppLanguage.french.code, 'fr');
+      expect(AppLanguage.english.displayName, 'English');
+      expect(AppLanguage.french.displayName, 'Français');
     });
   });
 

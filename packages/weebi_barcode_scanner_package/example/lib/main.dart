@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:weebi_barcode_scanner/weebi_barcode_scanner.dart';
+import 'package:weebi_barcode_scanner/weebi_openfoodfact.dart';
 
 import 'simple_scanner_demo.dart';
 
@@ -53,7 +54,7 @@ class HorizontalScannerScreen extends StatefulWidget {
 class _HorizontalScannerScreenState extends State<HorizontalScannerScreen> {
   bool _isScanning = true;
   BarcodeResult? _lastResult;
-  WeebiProduct? _currentProduct;
+  OFFProduct? _currentProduct;
   bool _isLoadingProduct = false;
   String? _productError;
 

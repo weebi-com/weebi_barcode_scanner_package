@@ -2,12 +2,12 @@ import 'package:openfoodfacts/openfoodfacts.dart' as off;
 import 'weebi_language.dart';
 
 /// Product type enumeration
-enum WeebiProductType {
+enum OFFProductType {
   food('Food Product'),
   beauty('Beauty/Cosmetic Product'),
   general('General Product');
   
-  const WeebiProductType(this.displayName);
+  const OFFProductType(this.displayName);
   final String displayName;
 }
 
@@ -128,12 +128,12 @@ class WeebiPriceStats {
 }
 
 /// Enhanced product model with multi-language support and pricing data
-class WeebiProduct {
+class OFFProduct {
   /// Product barcode
   final String barcode;
   
   /// Product type (food, beauty, or general)
-  final WeebiProductType productType;
+  final OFFProductType productType;
   
   /// Product name (in the fetched language)
   final String? name;
@@ -163,7 +163,7 @@ class WeebiProduct {
   final String? nutritionImageUrl;
   
   /// Language of the fetched data
-  final WeebiLanguage language;
+  final AppLanguage language;
   
   /// When this product data was cached
   final DateTime cachedAt;
@@ -184,7 +184,7 @@ class WeebiProduct {
   final String? periodAfterOpening;
   final List<String> cosmeticIngredients;
   
-  const WeebiProduct({
+  const OFFProduct({
     required this.barcode,
     required this.productType,
     this.name,
@@ -206,15 +206,15 @@ class WeebiProduct {
   });
 
   /// Create from OpenFoodFacts API response
-  factory WeebiProduct.fromOpenFoodFacts(
+  factory OFFProduct.fromOpenFoodFacts(
     off.Product product, 
-    WeebiLanguage language,
-    WeebiProductType productType, {
+    AppLanguage language,
+    OFFProductType productType, {
     WeebiPrice? currentPrice,
     List<WeebiPrice> recentPrices = const [],
     WeebiPriceStats? priceStats,
   }) {
-    return WeebiProduct(
+    return OFFProduct(
       barcode: product.barcode ?? '',
       productType: productType,
       name: product.productName,
@@ -238,12 +238,12 @@ class WeebiProduct {
   }
 
   /// Create a copy with updated price data
-  WeebiProduct copyWithPrices({
+  OFFProduct copyWithPrices({
     WeebiPrice? currentPrice,
     List<WeebiPrice>? recentPrices,
     WeebiPriceStats? priceStats,
   }) {
-    return WeebiProduct(
+    return OFFProduct(
       barcode: barcode,
       productType: productType,
       name: name,

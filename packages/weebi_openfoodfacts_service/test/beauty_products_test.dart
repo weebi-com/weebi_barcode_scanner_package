@@ -17,7 +17,7 @@ void main() {
       final product = await WeebiOpenFoodFactsService.getBeautyProduct('3560070791460');
       
       expect(product, isNotNull);
-      expect(product!.productType, equals(WeebiProductType.beauty));
+      expect(product!.productType, equals(OFFProductType.beauty));
       expect(product.barcode, equals('3560070791460'));
       expect(product.name, isNotNull);
       expect(product.brand, isNotNull);
@@ -63,10 +63,10 @@ void main() {
         limit: 5,
       );
       
-      expect(products, isA<List<WeebiProduct>>());
+      expect(products, isA<List<OFFProduct>>());
       
       if (products.isNotEmpty) {
-        expect(products.first.productType, equals(WeebiProductType.beauty));
+        expect(products.first.productType, equals(OFFProductType.beauty));
         print('✅ Found ${products.length} beauty products for "shampoo"');
         print('   Sample: ${products.first.name} (${products.first.brand})');
       }

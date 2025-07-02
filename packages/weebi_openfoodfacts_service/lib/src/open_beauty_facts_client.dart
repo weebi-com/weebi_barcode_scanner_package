@@ -58,10 +58,10 @@ class OpenBeautyFactsClient {
     }
   }
   
-  /// Convert OpenBeautyFacts API response to WeebiProduct
-  WeebiProduct? convertToWeebiProduct(
+  /// Convert OpenBeautyFacts API response to OFFProduct
+  OFFProduct? convertToWeebiProduct(
     Map<String, dynamic> beautyProduct,
-    WeebiLanguage language,
+    AppLanguage language,
   ) {
     try {
       // Extract basic information
@@ -98,9 +98,9 @@ class OpenBeautyFactsClient {
       final imageUrl = beautyProduct['image_front_url'] ?? beautyProduct['image_url'];
       final ingredientsImageUrl = beautyProduct['image_ingredients_url'];
       
-      return WeebiProduct(
-        barcode: barcode,
-        productType: WeebiProductType.beauty,
+              return OFFProduct(
+          barcode: barcode,
+          productType: OFFProductType.beauty,
         name: name,
         brand: brand,
         ingredients: ingredients,

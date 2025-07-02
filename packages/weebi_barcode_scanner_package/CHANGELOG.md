@@ -1,3 +1,8 @@
+## 1.7.0
+
+- bump openfood fact dep
+- mono repo
+
 ## 1.6.8
 
 - cleaning
@@ -125,7 +130,7 @@ ScannerConfig.continuous()
 #### New Architecture
 - **Core Package**: [`weebi_barcode_dart`](https://github.com/weebi-com/weebi_barcode_dart) - Pure Dart barcode detection with FFI interface
 - **UI Package**: `weebi_barcode_scanner` - Flutter widget layer with camera integration
-- **Service Package**: [`weebi_openfoodfacts_service`](https://github.com/weebi-com/weebi_openfoodfacts) - Product information service
+- **Service Package**: [`weebi_openfoodfacts_service`](https://github.com/weebi-com/weebi_openfoodfacts_service) - Product information service
 
 #### Changes Made
 - ✅ Extracted embedded `dart_barcode` logic to external `weebi_barcode_dart` package

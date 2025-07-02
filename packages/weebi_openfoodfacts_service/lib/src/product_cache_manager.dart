@@ -13,13 +13,13 @@ class ProductCacheManager {
   }
 
   /// Get cached product
-  Future<WeebiProduct?> getProduct(String barcode) async {
+  Future<OFFProduct?> getProduct(String barcode) async {
     // TODO: Implement SQLite query
     return null;
   }
 
   /// Cache a product
-  Future<void> cacheProduct(WeebiProduct product) async {
+  Future<void> cacheProduct(OFFProduct product) async {
     // TODO: Implement SQLite insert/update
   }
 

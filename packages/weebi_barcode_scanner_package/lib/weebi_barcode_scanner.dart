@@ -9,10 +9,9 @@ export 'src/scanner_config.dart';
 export 'src/platform_camera_manager.dart';
 export 'src/simple_barcode_scanner.dart';
 
-// Export OpenFoodFacts service and models
-export 'package:weebi_openfoodfacts_service/weebi_openfoodfacts_service.dart';
-export 'package:weebi_openfoodfacts_service/src/models/weebi_product.dart';
-export 'package:weebi_openfoodfacts_service/src/models/weebi_language.dart';
+// Export OpenFoodFacts types for convenience
+export 'package:weebi_openfoodfacts_service/weebi_openfoodfacts_service.dart' show OFFProduct, OFFProductType, WeebiOpenFoodFactsService;
+
 
 /// Public API for OpenFoodFacts integration
 class WeebiBarcodeScannerAPI {
@@ -32,7 +31,7 @@ class WeebiBarcodeScannerAPI {
   }
 
   /// Fetch product info by barcode (food, beauty, or general)
-  static Future<WeebiProduct?> fetchProduct(String barcode) async {
+  static Future<OFFProduct?> fetchProduct(String barcode) async {
     // Try food first, then beauty, then general
     final food = await WeebiOpenFoodFactsService.getProduct(barcode);
     if (food != null) return food;
@@ -44,15 +43,15 @@ class WeebiBarcodeScannerAPI {
   }
 
   /// Fetch food product only
-  static Future<WeebiProduct?> fetchFoodProduct(String barcode) =>
+  static Future<OFFProduct?> fetchFoodProduct(String barcode) =>
       WeebiOpenFoodFactsService.getProduct(barcode);
 
   /// Fetch beauty product only
-  static Future<WeebiProduct?> fetchBeautyProduct(String barcode) =>
+  static Future<OFFProduct?> fetchBeautyProduct(String barcode) =>
       WeebiOpenFoodFactsService.getBeautyProduct(barcode);
 
   /// Fetch general product only
-  static Future<WeebiProduct?> fetchGeneralProduct(String barcode) =>
+  static Future<OFFProduct?> fetchGeneralProduct(String barcode) =>
       WeebiOpenFoodFactsService.getGeneralProduct(barcode);
 
   /// Get available OpenFoodFacts features

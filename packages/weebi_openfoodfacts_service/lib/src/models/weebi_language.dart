@@ -1,7 +1,7 @@
 import 'package:openfoodfacts/openfoodfacts.dart' as off;
 
 /// Supported languages for Weebi OpenFoodFacts integration
-enum WeebiLanguage {
+enum AppLanguage {
   english,
   french,
   spanish,
@@ -16,25 +16,25 @@ enum WeebiLanguage {
   /// Convert to OpenFoodFacts language
   off.OpenFoodFactsLanguage get openFoodFactsLanguage {
     switch (this) {
-      case WeebiLanguage.english:
+      case AppLanguage.english:
         return off.OpenFoodFactsLanguage.ENGLISH;
-      case WeebiLanguage.french:
+      case AppLanguage.french:
         return off.OpenFoodFactsLanguage.FRENCH;
-      case WeebiLanguage.spanish:
+      case AppLanguage.spanish:
         return off.OpenFoodFactsLanguage.SPANISH;
-      case WeebiLanguage.german:
+      case AppLanguage.german:
         return off.OpenFoodFactsLanguage.GERMAN;
-      case WeebiLanguage.italian:
+      case AppLanguage.italian:
         return off.OpenFoodFactsLanguage.ITALIAN;
-      case WeebiLanguage.portuguese:
+      case AppLanguage.portuguese:
         return off.OpenFoodFactsLanguage.PORTUGUESE;
-      case WeebiLanguage.dutch:
+      case AppLanguage.dutch:
         return off.OpenFoodFactsLanguage.DUTCH;
-      case WeebiLanguage.chinese:
+      case AppLanguage.chinese:
         return off.OpenFoodFactsLanguage.CHINESE;
-      case WeebiLanguage.japanese:
+      case AppLanguage.japanese:
         return off.OpenFoodFactsLanguage.JAPANESE;
-      case WeebiLanguage.arabic:
+      case AppLanguage.arabic:
         return off.OpenFoodFactsLanguage.ARABIC;
     }
   }
@@ -42,25 +42,25 @@ enum WeebiLanguage {
   /// Language code (ISO 639-1)
   String get code {
     switch (this) {
-      case WeebiLanguage.english:
+      case AppLanguage.english:
         return 'en';
-      case WeebiLanguage.french:
+      case AppLanguage.french:
         return 'fr';
-      case WeebiLanguage.spanish:
+      case AppLanguage.spanish:
         return 'es';
-      case WeebiLanguage.german:
+      case AppLanguage.german:
         return 'de';
-      case WeebiLanguage.italian:
+      case AppLanguage.italian:
         return 'it';
-      case WeebiLanguage.portuguese:
+      case AppLanguage.portuguese:
         return 'pt';
-      case WeebiLanguage.dutch:
+      case AppLanguage.dutch:
         return 'nl';
-      case WeebiLanguage.chinese:
+      case AppLanguage.chinese:
         return 'zh';
-      case WeebiLanguage.japanese:
+      case AppLanguage.japanese:
         return 'ja';
-      case WeebiLanguage.arabic:
+      case AppLanguage.arabic:
         return 'ar';
     }
   }
@@ -68,52 +68,52 @@ enum WeebiLanguage {
   /// Display name
   String get displayName {
     switch (this) {
-      case WeebiLanguage.english:
+      case AppLanguage.english:
         return 'English';
-      case WeebiLanguage.french:
+      case AppLanguage.french:
         return 'Français';
-      case WeebiLanguage.spanish:
+      case AppLanguage.spanish:
         return 'Español';
-      case WeebiLanguage.german:
+      case AppLanguage.german:
         return 'Deutsch';
-      case WeebiLanguage.italian:
+      case AppLanguage.italian:
         return 'Italiano';
-      case WeebiLanguage.portuguese:
+      case AppLanguage.portuguese:
         return 'Português';
-      case WeebiLanguage.dutch:
+      case AppLanguage.dutch:
         return 'Nederlands';
-      case WeebiLanguage.chinese:
+      case AppLanguage.chinese:
         return '中文';
-      case WeebiLanguage.japanese:
+      case AppLanguage.japanese:
         return '日本語';
-      case WeebiLanguage.arabic:
+      case AppLanguage.arabic:
         return 'العربية';
     }
   }
 
   /// Create from language code
-  static WeebiLanguage? fromCode(String code) {
+  static AppLanguage? fromCode(String code) {
     switch (code.toLowerCase()) {
       case 'en':
-        return WeebiLanguage.english;
+        return AppLanguage.english;
       case 'fr':
-        return WeebiLanguage.french;
+        return AppLanguage.french;
       case 'es':
-        return WeebiLanguage.spanish;
+        return AppLanguage.spanish;
       case 'de':
-        return WeebiLanguage.german;
+        return AppLanguage.german;
       case 'it':
-        return WeebiLanguage.italian;
+        return AppLanguage.italian;
       case 'pt':
-        return WeebiLanguage.portuguese;
+        return AppLanguage.portuguese;
       case 'nl':
-        return WeebiLanguage.dutch;
+        return AppLanguage.dutch;
       case 'zh':
-        return WeebiLanguage.chinese;
+        return AppLanguage.chinese;
       case 'ja':
-        return WeebiLanguage.japanese;
+        return AppLanguage.japanese;
       case 'ar':
-        return WeebiLanguage.arabic;
+        return AppLanguage.arabic;
       default:
         return null;
     }

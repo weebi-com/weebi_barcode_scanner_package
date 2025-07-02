@@ -21,7 +21,7 @@ class BarcodeResult {
   final Map<String, int>? location;
   
   /// OpenFoodFacts product information (if available)
-  final WeebiProduct? product;
+  final OFFProduct? product;
   
   /// Whether product information was found
   bool get hasProductInfo => product != null;
@@ -59,7 +59,7 @@ class BarcodeResult {
     String? productBrand,
     double? confidence,
     Map<String, int>? location,
-    WeebiProduct? product,
+    OFFProduct? product,
   }) {
     return BarcodeResult(
       text: text ?? this.text,

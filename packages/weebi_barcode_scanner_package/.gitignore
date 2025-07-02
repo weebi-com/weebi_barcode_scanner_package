@@ -38,4 +38,4 @@ example/models/
 example/fix_windows_plugins.ps1
 macos/Flutter/ephemeral/flutter_export_environment.sh
 macos/Flutter/ephemeral/Flutter-Generated.xcconfig
-weebi_openfoodfacts
+weebi_openfoodfacts_service
