@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:weebi_barcode_dart/weebi_barcode_dart.dart' as core;
+import 'dart_barcode/weebi_barcode_dart.dart' as core;
 
 import 'barcode_result.dart';
 import 'barcode_scanner_widget.dart';
@@ -71,8 +71,6 @@ class SimpleBarcodeScanner extends StatelessWidget {
     );
   }
 }
-
-/// Extension to add copyWith method to ScannerConfig
 extension ScannerConfigExtension on ScannerConfig {
   ScannerConfig copyWith({
     String? modelPath,
@@ -119,6 +117,7 @@ class BarcodeScanner {
   /// 
   /// Parameters:
   /// - [modelPath]: Custom path for the model file. If null, uses default location.
+  /// - [onProgress]: Optional callback to track download progress (0.0 to 1.0)
   /// 
   /// Throws:
   /// - [Exception] if model download fails or initialization fails
@@ -128,11 +127,17 @@ class BarcodeScanner {
   /// // Use default location
   /// await BarcodeScanner.initialize();
   /// 
-  /// // Use custom path
-  /// await BarcodeScanner.initialize('/custom/path/to/model.rten');
+  /// // Use custom path with progress tracking
+  /// await BarcodeScanner.initialize(
+  ///   '/custom/path/to/model.rten',
+  ///   (progress, status) => print('$status: ${(progress * 100).toInt()}%'),
+  /// );
   /// ```
-  static Future<void> initialize([String? modelPath]) async {
-    await core.BarcodeDetector.initializeOrDownload(modelPath);
+  static Future<void> initialize([
+    String? modelPath,
+    void Function(double progress, String status)? onProgress,
+  ]) async {
+    await core.BarcodeDetector.initializeOrDownload(modelPath, onProgress);
   }
   
   /// Check if the scanner is initialized
@@ -148,9 +153,12 @@ class BarcodeScanner {
     return core.ModelManager.modelExists(path);
   }
   
-  /// Download model to specific path
-  static Future<void> downloadModel(String path) async {
-    await core.ModelManager.downloadModel(path);
+  /// Download model to specific path with progress tracking
+  static Future<void> downloadModel(
+    String path, {
+    void Function(double progress, String status)? onProgress,
+  }) async {
+    await core.ModelManager.downloadModel(path, onProgress: onProgress);
   }
 }
 
@@ -171,11 +179,16 @@ class WeebiBarcodeScanner {
   /// Example:
   /// ```dart
   /// try {
-  ///   final result = await WeebiBarcodeScanner.scan();
+  ///   final result = await WeebiBarcodeScanner.scan(
+  ///     title: 'Scan Product Barcode',
+  ///     subtitle: 'Point your camera at a barcode to scan it',
+  ///   );
   ///   if (result.isSuccess) {
   ///     print('Scanned: ${result.code}');
+  ///   } else if (result.isCancelled) {
+  ///     print('User cancelled');
   ///   } else {
-  ///     print('Scan cancelled or failed');
+  ///     print('Error: ${result.error}');
   ///   }
   /// } catch (e) {
   ///   print('Error: $e');
@@ -222,10 +235,30 @@ class WeebiBarcodeScanner {
   /// Get the current navigator context (best effort)
   static BuildContext? _getCurrentContext() {
     try {
-      // Try to get the root context
+      // Try to get the root context and find Navigator
       final rootElement = WidgetsBinding.instance.rootElement;
       if (rootElement != null) {
-        return rootElement;
+        // Try to find a context that has a Navigator
+        BuildContext? navigatorContext;
+        
+        void visitor(Element element) {
+          if (navigatorContext != null) return;
+          
+          // Check if this element has Navigator in its widget tree
+          try {
+            Navigator.of(element, rootNavigator: false);
+            navigatorContext = element;
+            return;
+          } catch (e) {
+            // This element doesn't have Navigator, continue searching
+          }
+          
+          // Visit children
+          element.visitChildren(visitor);
+        }
+        
+        visitor(rootElement);
+        return navigatorContext;
       }
     } catch (e) {
       // Fallback failed
@@ -355,29 +388,6 @@ class _SimpleScannerScreenState extends State<_SimpleScannerScreen> {
           
           // Overlay with scanning area
           _buildScanningOverlay(),
-          
-          // Bottom instruction text
-          if (widget.subtitle != null)
-            Positioned(
-              bottom: 100,
-              left: 20,
-              right: 20,
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.7),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  widget.subtitle!,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            ),
         ],
       ),
     );
@@ -386,50 +396,45 @@ class _SimpleScannerScreenState extends State<_SimpleScannerScreen> {
   Widget _buildScanningOverlay() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.5),
+        color: Colors.black.withOpacity(0.3),
       ),
       child: Stack(
         children: [
-          // Create a hole in the overlay for the scanning area
+          // Center crosshair for YOLO-based detection
           Center(
-            child: Container(
-              width: 250,
-              height: 250,
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.white, width: 2),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: Container(
-                  color: Colors.transparent,
-                ),
-              ),
+            child: CustomPaint(
+              size: const Size(60, 60),
+              painter: _CrosshairPainter(),
             ),
           ),
           
-          // Scanning line animation
+          // Pulsing animation around the crosshair
           Center(
-            child: SizedBox(
-              width: 250,
-              height: 250,
-              child: _buildScanningLine(),
-            ),
-          ),
-          
-          // Instructions
-          const Positioned(
-            top: 100,
-            left: 20,
-            right: 20,
-            child: Text(
-              'Position the barcode within the frame',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.w500,
-              ),
-              textAlign: TextAlign.center,
+            child: TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0.8, end: 1.2),
+              duration: const Duration(milliseconds: 1500),
+              builder: (context, value, child) {
+                return Transform.scale(
+                  scale: value,
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.3),
+                        width: 1,
+                      ),
+                    ),
+                  ),
+                );
+              },
+              onEnd: () {
+                // Restart the animation
+                if (mounted) {
+                  setState(() {});
+                }
+              },
             ),
           ),
         ],
@@ -437,39 +442,60 @@ class _SimpleScannerScreenState extends State<_SimpleScannerScreen> {
     );
   }
 
-  Widget _buildScanningLine() {
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0.0, end: 1.0),
-      duration: const Duration(seconds: 2),
-      builder: (context, value, child) {
-        return Stack(
-          children: [
-            Positioned(
-              top: value * 220, // Animate from top to bottom
-              left: 10,
-              right: 10,
-              child: Container(
-                height: 2,
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Colors.transparent,
-                      Colors.red,
-                      Colors.transparent,
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-      onEnd: () {
-        // Restart the animation
-        if (mounted) {
-          setState(() {});
-        }
-      },
+}
+
+/// Custom painter for drawing a crosshair at the center of the screen
+/// Designed for YOLO-based barcode detection where the entire frame is analyzed
+class _CrosshairPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint paint = Paint()
+      ..color = Colors.white
+      ..strokeWidth = 2.0
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    final double centerX = size.width / 2;
+    final double centerY = size.height / 2;
+    final double crosshairLength = 20.0;
+    final double gapSize = 6.0;
+
+    // Draw horizontal lines (left and right of center)
+    canvas.drawLine(
+      Offset(centerX - crosshairLength - gapSize, centerY),
+      Offset(centerX - gapSize, centerY),
+      paint,
+    );
+    canvas.drawLine(
+      Offset(centerX + gapSize, centerY),
+      Offset(centerX + crosshairLength + gapSize, centerY),
+      paint,
+    );
+
+    // Draw vertical lines (top and bottom of center)
+    canvas.drawLine(
+      Offset(centerX, centerY - crosshairLength - gapSize),
+      Offset(centerX, centerY - gapSize),
+      paint,
+    );
+    canvas.drawLine(
+      Offset(centerX, centerY + gapSize),
+      Offset(centerX, centerY + crosshairLength + gapSize),
+      paint,
+    );
+
+    // Draw center dot
+    final Paint dotPaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
+    
+    canvas.drawCircle(
+      Offset(centerX, centerY),
+      2.0,
+      dotPaint,
     );
   }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 } 

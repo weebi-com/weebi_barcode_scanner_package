@@ -1,7 +1,7 @@
 name: weebi_barcode_scanner
 description: "Self-contained barcode scanner with real-time detection overlay. Features embedded YOLO detection, cross-platform support (Windows/macOS), point-of-sale optimizations, and OpenFoodFacts integration. No manual setup required."
-version: 1.6.1
-homepage: https://github.com/weebi-com/weebi_barcode_scanner
+version: 1.6.8
+homepage: https://www.weebi.com
 repository: https://github.com/weebi-com/weebi_barcode_scanner_package
 issue_tracker: https://github.com/weebi-com/weebi_barcode_scanner_package/issues
 
@@ -14,17 +14,22 @@ dependencies:
     sdk: flutter
   
   # Camera support for different platforms
-  camera: ^0.10.5+5
+  camera: ^0.11.1
   camera_windows: ^0.2.6+2
   camera_macos: ^0.0.9
-  
-  # File handling
+
+  # File handling and path utilities
   path: ^1.8.0
+  path_provider: ^2.0.15
   
-  # Core barcode detection engine
-  weebi_barcode_dart: ^1.0.2
+  # FFI for native library integration (from dart_barcode)
+  ffi: ^2.0.1
+  
+  # Image processing utilities (from dart_barcode)
+  image: ^4.0.17
+  
   # OpenFoodFacts integration via separate package
-  weebi_openfoodfacts_service: ^1.1.0
+  weebi_openfoodfacts_service: ^1.3.1
 
 dev_dependencies:
   flutter_test:
@@ -40,48 +45,10 @@ flutter:
   plugin:
     platforms:
       windows:
-        dartPluginClass: WeebiBarcodeScanner
         pluginClass: WeebiBarcodePlugin
       macos:
-        dartPluginClass: WeebiBarcodeScanner
         pluginClass: WeebiBarcodePlugin
 
-  # Package assets - NO NATIVE LIBRARIES
-  # Native libraries and models must be provided by consuming applications
+  # Assets are no longer bundled - Yolo model is downloaded automatically
+  # Native libraries must be provided by consuming applications
   # See documentation for setup instructions
-  # assets: 
-  #   - README: Consuming apps must provide their own native assets
-  #   - Required: assets/best.rten (11.68 MB)
-  #   - Required Windows: windows/rust_barcode_lib.dll (10.87 MB)  
-  #   - Required macOS: macos/Frameworks/librust_barcode_lib.dylib (22 MB total)
-
-  # To add assets to your package, add an assets section, like this:
-  assets:
-    - assets/
-    - windows/
-  #
-  # For details regarding assets in packages, see
-  # https://flutter.dev/to/asset-from-package
-  #
-  # An image asset can refer to one or more resolution-specific "variants", see
-  # https://flutter.dev/to/resolution-aware-images
-
-  # To add custom fonts to your package, add a fonts section here,
-  # in this "flutter" section. Each entry in this list should have a
-  # "family" key with the font family name, and a "fonts" key with a
-  # list giving the asset and other descriptors for the font. For
-  # example:
-  # fonts:
-  #   - family: Schyler
-  #     fonts:
-  #       - asset: fonts/Schyler-Regular.ttf
-  #       - asset: fonts/Schyler-Italic.ttf
-  #         style: italic
-  #   - family: Trajan Pro
-  #     fonts:
-  #       - asset: fonts/TrajanPro.ttf
-  #       - asset: fonts/TrajanPro_Bold.ttf
-  #         weight: 700
-  #
-  # For details regarding fonts in packages, see
-  # https://flutter.dev/to/font-from-package

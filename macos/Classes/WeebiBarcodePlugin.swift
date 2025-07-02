@@ -23,10 +23,7 @@ public class WeebiBarcodePlugin: NSObject, FlutterPlugin {
   
   private func checkNativeLibraryAvailability() -> Bool {
     // Check if the native Rust library is properly loaded
-    guard let bundle = Bundle(for: WeebiBarcodePlugin.self) else {
-      print("WeebiBarcodePlugin: Could not get plugin bundle")
-      return false
-    }
+    let bundle = Bundle(for: WeebiBarcodePlugin.self)
     
     let possiblePaths = [
       "Frameworks/librust_barcode_lib.dylib",
@@ -48,7 +45,7 @@ public class WeebiBarcodePlugin: NSObject, FlutterPlugin {
   
   private func handleBarcodeDetection(call: FlutterMethodCall, result: @escaping FlutterResult) {
     guard let arguments = call.arguments as? [String: Any],
-          let imageData = arguments["imageData"] as? FlutterStandardTypedData else {
+          let _ = arguments["imageData"] as? FlutterStandardTypedData else {
       result(FlutterError(code: "INVALID_ARGUMENTS", 
                          message: "Missing or invalid imageData", 
                          details: nil))

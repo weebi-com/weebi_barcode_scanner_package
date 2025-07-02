@@ -103,6 +103,41 @@ class ScannerConfig {
     this.enableHapticFeedback = true,
     this.enableContinuousAutoFocus = true,
   });
+
+  /// Create a copy of this config with some fields replaced
+  ScannerConfig copyWith({
+    String? modelPath,
+    bool? useSuperResolution,
+    bool? enableProductLookup,
+    bool? showOverlay,
+    bool? showStatusOverlay,
+    Color? overlayColor,
+    Duration? scanInterval,
+    Duration? timeout,
+    bool? enableImageEnhancement,
+    bool? enablePreprocessing,
+    bool? debugMode,
+    bool? scanOnce,
+    bool? enableHapticFeedback,
+    bool? enableContinuousAutoFocus,
+  }) {
+    return ScannerConfig(
+      modelPath: modelPath ?? this.modelPath,
+      useSuperResolution: useSuperResolution ?? this.useSuperResolution,
+      enableProductLookup: enableProductLookup ?? this.enableProductLookup,
+      showOverlay: showOverlay ?? this.showOverlay,
+      showStatusOverlay: showStatusOverlay ?? this.showStatusOverlay,
+      overlayColor: overlayColor ?? this.overlayColor,
+      scanInterval: scanInterval ?? this.scanInterval,
+      timeout: timeout ?? this.timeout,
+      enableImageEnhancement: enableImageEnhancement ?? this.enableImageEnhancement,
+      enablePreprocessing: enablePreprocessing ?? this.enablePreprocessing,
+      debugMode: debugMode ?? this.debugMode,
+      scanOnce: scanOnce ?? this.scanOnce,
+      enableHapticFeedback: enableHapticFeedback ?? this.enableHapticFeedback,
+      enableContinuousAutoFocus: enableContinuousAutoFocus ?? this.enableContinuousAutoFocus,
+    );
+  }
   
   // Keep static constants for backward compatibility
   static const ScannerConfig continuousMode = ScannerConfig.continuous();

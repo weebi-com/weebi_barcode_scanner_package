@@ -1,3 +1,43 @@
+## 1.6.8
+
+- cleaning
+
+## 1.6.7
+
+- lower dart SDK
+
+## 1.6.6
+
+- bump weebi_openfoodfacts_service
+- no need for credentials for open food fact calling
+- richer integration (beauty facts + products fact) 
+
+## 1.6.5
+
+- fix windows dll path 
+- UX reworked in simple case 
+- example app refactored to use only the scanner package's API—no direct dependency or import of weebi_openfoodfacts_service.
+
+## 1.6.4 
+
+- add BarcodeDetector class
+
+## 1.6.4
+
+- **FIXED**: Improved automatic Navigator context detection in WeebiBarcodeScanner.scan() method
+- Fixed Navigator context issues - now works like barcode_scan2 without requiring context parameter
+- WeebiBarcodeScanner.scan() now properly finds Navigator context automatically
+
+## 1.6.3
+
+- **CRITICAL FIX**: Fixed missing dart_barcode model classes in published package
+- Fixed .gitignore excluding required Dart source files
+- Package now works properly when installed from pub.dev
+
+## 1.6.2
+
+- fix missing windows dep
+
 ## 1.6.1
 
 - simple single scan example

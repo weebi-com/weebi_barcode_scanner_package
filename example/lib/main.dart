@@ -1,18 +1,28 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:camera/camera.dart';
 import 'package:weebi_barcode_scanner/weebi_barcode_scanner.dart';
-import 'package:weebi_openfoodfacts_service/weebi_openfoodfacts_service.dart';
 
 import 'simple_scanner_demo.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Initialize the OpenFoodFacts service
-  await WeebiOpenFoodFactsService.initialize(appName: 'barcode_scanner_example');
+  // Initialize OpenFoodFacts via the scanner package API (no credentials needed)
+  await WeebiBarcodeScannerAPI.initializeOpenFoodFacts(
+    appName: 'barcode_scanner_example',
+    enablePricing: false, // No credentials needed
+    enableBeautyProducts: true,
+  );
+  
+  // Log available features
+  final features = WeebiBarcodeScannerAPI.getAvailableFeatures();
+  print('🚀 Available features:');
+  features.forEach((feature, available) {
+    print('  ${available ? '✅' : '❌'} $feature');
+  });
+  
+  // Show credential setup info
+  print(WeebiBarcodeScannerAPI.getCredentialSetupInfo());
   
   runApp(const MyApp());
 }
@@ -74,7 +84,7 @@ class _HorizontalScannerScreenState extends State<HorizontalScannerScreen> {
 
   Future<void> _loadProductInfo(String barcode) async {
     try {
-      final product = await WeebiOpenFoodFactsService.getProduct(barcode);
+      final product = await WeebiBarcodeScannerAPI.fetchProduct(barcode);
       
       if (mounted) {
         setState(() {
@@ -261,6 +271,10 @@ class _HorizontalScannerScreenState extends State<HorizontalScannerScreen> {
           ),
           const SizedBox(height: 16),
           
+          // Feature status indicator
+          _buildFeatureStatusCard(),
+          const SizedBox(height: 16),
+          
           // Barcode info
           if (_lastResult != null) ...[
             _buildInfoCard(
@@ -278,6 +292,57 @@ class _HorizontalScannerScreenState extends State<HorizontalScannerScreen> {
           // Product info
           Expanded(
             child: _buildProductCard(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFeatureStatusCard() {
+    final features = WeebiBarcodeScannerAPI.getAvailableFeatures();
+    final isPricingAvailable = features['pricing_data'] ?? false;
+    
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isPricingAvailable ? Colors.green.shade50 : Colors.orange.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: isPricingAvailable ? Colors.green.shade200 : Colors.orange.shade200,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            isPricingAvailable ? Icons.check_circle : Icons.info_outline,
+            color: isPricingAvailable ? Colors.green : Colors.orange,
+            size: 20,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  isPricingAvailable ? 'Full Features Available' : 'Basic Features Only',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: isPricingAvailable ? Colors.green.shade700 : Colors.orange.shade700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  isPricingAvailable 
+                      ? 'Product info + pricing data available'
+                      : 'Product info available (pricing requires credentials)',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isPricingAvailable ? Colors.green.shade600 : Colors.orange.shade600,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -390,6 +455,44 @@ class _HorizontalScannerScreenState extends State<HorizontalScannerScreen> {
             _buildInfoRow('Ingredients', _currentProduct!.ingredients!),
           if (_currentProduct!.nutriScore != null)
             _buildNutritionGrade(_currentProduct!.nutriScore!),
+          
+          // Pricing information (if available)
+          if (_currentProduct!.hasPriceData) ...[
+            const SizedBox(height: 16),
+            const Text(
+              'Pricing Information:',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+                color: Colors.green,
+              ),
+            ),
+            const SizedBox(height: 4),
+            if (_currentProduct!.currentPrice != null)
+              _buildInfoRow('Current Price', _currentProduct!.currentPrice!.toString()),
+            if (_currentProduct!.priceStats != null) ...[
+              _buildInfoRow('Average Price', '${_currentProduct!.priceStats?.averagePrice?.toStringAsFixed(2) ?? '-'} ${_currentProduct!.priceStats?.currency ?? ''}'),
+              _buildInfoRow('Price Range', '${_currentProduct!.priceStats?.minPrice?.toStringAsFixed(2) ?? '-'} - ${_currentProduct!.priceStats?.maxPrice?.toStringAsFixed(2) ?? '-'} ${_currentProduct!.priceStats?.currency ?? ''}'),
+              _buildInfoRow('Price Count', '${_currentProduct!.recentPrices.length} recent prices'),
+            ],
+          ] else if (WeebiBarcodeScannerAPI.getAvailableFeatures()['pricing_data'] ?? false) ...[
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: const Text(
+                'No pricing data available for this product',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ),
+          ],
           
           const SizedBox(height: 16),
           
