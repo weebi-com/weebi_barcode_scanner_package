@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:weebi_barcode_scanner/weebi_barcode_scanner.dart';
-import 'package:weebi_barcode_scanner/weebi_openfoodfact.dart';
+import 'package:weebi_barcode_scanner/weebi_openfoodfact.dart'; 
 
 import 'simple_scanner_demo.dart';
 

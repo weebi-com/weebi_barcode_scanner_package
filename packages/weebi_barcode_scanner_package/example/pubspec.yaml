@@ -26,8 +26,7 @@ dependencies:
   path_provider: ^2.0.15
   path: ^1.8.3
   
-  # Added for scanner implementation
-  permission_handler: ^11.0.1
+
 
 dev_dependencies:
   flutter_test:

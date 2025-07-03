@@ -10,8 +10,8 @@ export 'src/open_prices_client.dart';
 export 'src/open_beauty_facts_client.dart';
 
 // Models
-export 'src/models/weebi_product.dart';
-export 'src/models/weebi_language.dart';
+export 'src/models/product.dart';
+export 'src/models/language.dart';
 export 'src/models/cache_config.dart';
 
 // Utilities

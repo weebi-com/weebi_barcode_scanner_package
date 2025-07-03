@@ -116,7 +116,14 @@ class _BarcodeScannerWidgetState extends State<BarcodeScannerWidget> with Widget
     _isDisposing = true;
     WidgetsBinding.instance.removeObserver(this);
     _stopScanning();
-    _cameraManager.dispose();
+    
+    // Ensure camera is properly disposed
+    try {
+      _cameraManager.dispose();
+    } catch (e) {
+      debugPrint('Error disposing camera in widget dispose: $e');
+    }
+    
     _scanTimer?.cancel();
     super.dispose();
   }
@@ -141,7 +148,7 @@ class _BarcodeScannerWidgetState extends State<BarcodeScannerWidget> with Widget
     if (_isDisposing) return;
     
     // Stop current operations
-    _scanTimer?.cancel();
+    _stopScanning();
     
     // Reset state
     setState(() {
@@ -152,8 +159,15 @@ class _BarcodeScannerWidgetState extends State<BarcodeScannerWidget> with Widget
       _initializationStatus = 'Initializing...';
     });
     
-    // Wait a bit for cleanup
-    await Future.delayed(const Duration(milliseconds: 500));
+    // Properly dispose camera before reinitializing
+    try {
+      await _cameraManager.dispose();
+    } catch (e) {
+      debugPrint('Error disposing camera during reinitialize: $e');
+    }
+    
+    // Extended wait for camera resource cleanup, especially important on Windows
+    await Future.delayed(const Duration(milliseconds: 1000));
     
     // Reinitialize
     if (!_isDisposing) {
@@ -164,6 +178,12 @@ class _BarcodeScannerWidgetState extends State<BarcodeScannerWidget> with Widget
   Future<void> _initializeScanner() async {
     if (_isInitializing || _isDisposing) {
       debugPrint('🔍 BarcodeScannerWidget: Already initializing or disposing, skipping');
+      return;
+    }
+
+    // Add a small delay to prevent rapid reinitialization attempts
+    if (_cameraManager.isInitialized) {
+      debugPrint('🔍 BarcodeScannerWidget: Camera already initialized, skipping');
       return;
     }
 
@@ -333,15 +353,19 @@ class _BarcodeScannerWidgetState extends State<BarcodeScannerWidget> with Widget
       _stopScanning();
       
       // Dispose camera for hot reload
-      await _cameraManager.dispose();
+      try {
+        await _cameraManager.dispose();
+      } catch (e) {
+        debugPrint('Error disposing camera during hot reload: $e');
+      }
       
       // Reset detector state
       _detectorInitialized = false;
       _latestBarcode = null;
       _lastDetectionTime = null;
       
-      // Wait for cleanup
-      await Future.delayed(const Duration(milliseconds: 500));
+      // Extended wait for camera resource cleanup, especially important on Windows
+      await Future.delayed(const Duration(milliseconds: 1000));
       
       // Reinitialize
       if (!_isDisposing) {

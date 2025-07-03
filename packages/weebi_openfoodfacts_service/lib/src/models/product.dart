@@ -1,5 +1,5 @@
 import 'package:openfoodfacts/openfoodfacts.dart' as off;
-import 'weebi_language.dart';
+import 'language.dart';
 
 /// Product type enumeration
 enum OFFProductType {
@@ -12,7 +12,7 @@ enum OFFProductType {
 }
 
 /// Price information from Open Prices API
-class WeebiPrice {
+class OFFPrice {
   /// Price value
   final double price;
   
@@ -43,7 +43,7 @@ class WeebiPrice {
   /// Source of the price data
   final String source;
   
-  const WeebiPrice({
+  const OFFPrice({
     required this.price,
     required this.currency,
     this.storeName,
@@ -57,8 +57,8 @@ class WeebiPrice {
   });
   
   /// Create from Open Prices API response
-  factory WeebiPrice.fromOpenPrices(Map<String, dynamic> json) {
-    return WeebiPrice(
+  factory OFFPrice.fromOpenPrices(Map<String, dynamic> json) {
+    return OFFPrice(
       price: (json['price'] as num).toDouble(),
       currency: json['currency'] ?? 'EUR',
       storeName: json['location_osm_name'],
@@ -79,7 +79,7 @@ class WeebiPrice {
 }
 
 /// Price statistics for a product
-class WeebiPriceStats {
+class OFFPriceStats {
   /// Current average price
   final double? averagePrice;
   
@@ -98,7 +98,7 @@ class WeebiPriceStats {
   /// Last updated date
   final DateTime? lastUpdated;
   
-  const WeebiPriceStats({
+  const OFFPriceStats({
     this.averagePrice,
     this.minPrice,
     this.maxPrice,
@@ -108,15 +108,15 @@ class WeebiPriceStats {
   });
   
   /// Create from multiple price records
-  factory WeebiPriceStats.fromPrices(List<WeebiPrice> prices) {
+  factory OFFPriceStats.fromPrices(List<OFFPrice> prices) {
     if (prices.isEmpty) {
-      return const WeebiPriceStats(priceCount: 0, currency: 'EUR');
+      return const OFFPriceStats(priceCount: 0, currency: 'EUR');
     }
     
     final priceValues = prices.map((p) => p.price).toList();
     final currency = prices.first.currency;
     
-    return WeebiPriceStats(
+    return OFFPriceStats(
       averagePrice: priceValues.reduce((a, b) => a + b) / priceValues.length,
       minPrice: priceValues.reduce((a, b) => a < b ? a : b),
       maxPrice: priceValues.reduce((a, b) => a > b ? a : b),
@@ -169,13 +169,13 @@ class OFFProduct {
   final DateTime cachedAt;
   
   /// Current price information (latest available)
-  final WeebiPrice? currentPrice;
+  final OFFPrice? currentPrice;
   
   /// Recent price history (last 30 days)
-  final List<WeebiPrice> recentPrices;
+  final List<OFFPrice> recentPrices;
   
   /// Price statistics
-  final WeebiPriceStats? priceStats;
+  final OFFPriceStats? priceStats;
   
   /// Whether price data is available for this product
   bool get hasPriceData => currentPrice != null || recentPrices.isNotEmpty;
@@ -210,9 +210,9 @@ class OFFProduct {
     off.Product product, 
     AppLanguage language,
     OFFProductType productType, {
-    WeebiPrice? currentPrice,
-    List<WeebiPrice> recentPrices = const [],
-    WeebiPriceStats? priceStats,
+    OFFPrice? currentPrice,
+    List<OFFPrice> recentPrices = const [],
+    OFFPriceStats? priceStats,
   }) {
     return OFFProduct(
       barcode: product.barcode ?? '',
@@ -239,9 +239,9 @@ class OFFProduct {
 
   /// Create a copy with updated price data
   OFFProduct copyWithPrices({
-    WeebiPrice? currentPrice,
-    List<WeebiPrice>? recentPrices,
-    WeebiPriceStats? priceStats,
+    OFFPrice? currentPrice,
+    List<OFFPrice>? recentPrices,
+    OFFPriceStats? priceStats,
   }) {
     return OFFProduct(
       barcode: barcode,

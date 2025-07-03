@@ -1,4 +1,4 @@
-import 'models/weebi_language.dart';
+import 'models/language.dart';
 
 /// Manages language preferences and fallbacks
 class LanguageManager {

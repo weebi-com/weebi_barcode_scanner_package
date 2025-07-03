@@ -1,8 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:openfoodfacts/openfoodfacts.dart' as off;
-import 'models/weebi_language.dart';
+import 'models/language.dart';
 import 'models/cache_config.dart';
-import 'models/weebi_product.dart';
+import 'models/product.dart';
 import 'language_manager.dart';
 import 'product_cache_manager.dart';
 
@@ -329,13 +329,13 @@ class WeebiOpenFoodFactsService {
         ),
       ]);
       
-      final currentPrice = futures[0] as WeebiPrice?;
-      final recentPrices = futures[1] as List<WeebiPrice>;
+      final currentPrice = futures[0] as OFFPrice?;
+      final recentPrices = futures[1] as List<OFFPrice>;
       
       // Calculate price statistics
-      WeebiPriceStats? priceStats;
+      OFFPriceStats? priceStats;
       if (recentPrices.isNotEmpty) {
-        priceStats = WeebiPriceStats.fromPrices(recentPrices);
+        priceStats = OFFPriceStats.fromPrices(recentPrices);
       }
       
       if (currentPrice != null || recentPrices.isNotEmpty) {
@@ -496,7 +496,7 @@ class WeebiOpenFoodFactsService {
   }
 
   /// Get latest price for a product
-  static Future<WeebiPrice?> getLatestPrice(String barcode, {String? location}) async {
+  static Future<OFFPrice?> getLatestPrice(String barcode, {String? location}) async {
     if (!_initialized) {
       throw StateError('WeebiOpenFoodFactsService not initialized. Call initialize() first.');
     }
@@ -516,7 +516,7 @@ class WeebiOpenFoodFactsService {
   }
 
   /// Get price history for a product
-  static Future<List<WeebiPrice>> getPriceHistory(
+  static Future<List<OFFPrice>> getPriceHistory(
     String barcode, {
     String? location,
     int limit = 50,
@@ -546,7 +546,7 @@ class WeebiOpenFoodFactsService {
   }
 
   /// Get price statistics for a product
-  static Future<WeebiPriceStats?> getPriceStats(String barcode, {String? location}) async {
+  static Future<OFFPriceStats?> getPriceStats(String barcode, {String? location}) async {
     if (!_initialized) {
       throw StateError('WeebiOpenFoodFactsService not initialized. Call initialize() first.');
     }

@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'models/weebi_product.dart';
-import 'models/weebi_language.dart';
+import 'models/product.dart';
+import 'models/language.dart';
 
 /// Client for OpenProductsFacts API integration
 /// Based on: https://openproductsfacts.org/

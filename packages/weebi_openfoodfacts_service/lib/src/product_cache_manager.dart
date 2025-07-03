@@ -1,5 +1,5 @@
 import 'models/cache_config.dart';
-import 'models/weebi_product.dart';
+import 'models/product.dart';
 
 /// Manages product caching using SQLite
 class ProductCacheManager {

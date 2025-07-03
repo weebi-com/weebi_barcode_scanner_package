@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'models/weebi_product.dart';
+import 'models/product.dart';
 import 'utils/credential_manager.dart';
 
 /// Client for Open Prices API integration
@@ -297,7 +297,7 @@ class OpenPricesClient {
   }
   
   /// Get prices for a specific product by barcode
-  Future<List<WeebiPrice>> getProductPrices(
+  Future<List<OFFPrice>> getProductPrices(
     String barcode, {
     int limit = 20,
     String? location,
@@ -326,7 +326,7 @@ class OpenPricesClient {
         final results = data['results'] as List<dynamic>? ?? [];
         
         final prices = results
-            .map((json) => WeebiPrice.fromOpenPrices(json as Map<String, dynamic>))
+            .map((json) => OFFPrice.fromOpenPrices(json as Map<String, dynamic>))
             .toList();
         
         debugPrint('✅ Found ${prices.length} prices for $barcode');
@@ -395,7 +395,7 @@ class OpenPricesClient {
   }
   
   /// Get the latest price for a product
-  Future<WeebiPrice?> getLatestPrice(String barcode, {String? location}) async {
+  Future<OFFPrice?> getLatestPrice(String barcode, {String? location}) async {
     final prices = await getProductPrices(barcode, limit: 1, location: location);
     
     if (prices.isNotEmpty) {
@@ -407,7 +407,7 @@ class OpenPricesClient {
   }
   
   /// Get price statistics for a product
-  Future<WeebiPriceStats?> getPriceStats(String barcode, {String? location}) async {
+  Future<OFFPriceStats?> getPriceStats(String barcode, {String? location}) async {
     final since = DateTime.now().subtract(const Duration(days: 30));
     final prices = await getProductPrices(
       barcode,
@@ -418,7 +418,7 @@ class OpenPricesClient {
     
     if (prices.isEmpty) return null;
     
-    return WeebiPriceStats.fromPrices(prices);
+    return OFFPriceStats.fromPrices(prices);
   }
   
   /// Get available locations (stores/cities) with price data
