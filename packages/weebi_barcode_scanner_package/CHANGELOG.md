@@ -1,3 +1,7 @@
+## 1.7.1
+
+- fix windows example by removing permission handler
+
 ## 1.7.0
 
 - bump openfood fact dep
