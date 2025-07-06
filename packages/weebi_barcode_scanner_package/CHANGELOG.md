@@ -1,6 +1,13 @@
+## 1.7.2
+
+Refactor camera management 
+implemented global camera manager for better resource management
+Enhanced aspect ratio handling for camera preview
+Removed unused binary files for macOS.
+
 ## 1.7.1
 
-- fix windows example by removing permission handler
+- fix windows example by removing permission handler (or you may keep it at 10.4.5, but not above)
 
 ## 1.7.0
 

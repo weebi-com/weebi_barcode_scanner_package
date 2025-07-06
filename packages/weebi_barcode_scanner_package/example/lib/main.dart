@@ -146,14 +146,17 @@ class _HorizontalScannerScreenState extends State<HorizontalScannerScreen> {
       ),
       body: Row(
         children: [
-          // Left side - Camera Preview
+          // Left side - Camera Preview (Fixed aspect ratio)
           Expanded(
             flex: 1,
             child: Container(
               decoration: BoxDecoration(
                 border: Border.all(color: Colors.grey.shade300),
+                color: Colors.black, // Black background for camera preview
               ),
-              child: _buildCameraPreview(),
+              child: ClipRect(
+                child: _buildCameraPreview(),
+              ),
             ),
           ),
           
@@ -169,18 +172,6 @@ class _HorizontalScannerScreenState extends State<HorizontalScannerScreen> {
             ),
           ),
         ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => const SimpleScannerDemo(),
-            ),
-          );
-        },
-        icon: const Icon(Icons.qr_code_scanner),
-        label: const Text('Simple Scanner'),
-        tooltip: 'Open simple barcode_scan2-style scanner',
       ),
     );
   }
@@ -206,12 +197,19 @@ class _HorizontalScannerScreenState extends State<HorizontalScannerScreen> {
 
     return Stack(
       children: [
-        // Use the BarcodeScannerWidget for camera preview and scanning
+        // Camera preview with proper aspect ratio handling
         Positioned.fill(
-          child: BarcodeScannerWidget(
-            onBarcodeDetected: _handleBarcodeDetected,
-            onError: (error) => _showError(error),
-            config: ScannerConfig.continuousMode,
+          child: FittedBox(
+            fit: BoxFit.cover,
+            child: SizedBox(
+              width: 640, // Standard camera width
+              height: 480, // Standard camera height
+              child: BarcodeScannerWidget(
+                onBarcodeDetected: _handleBarcodeDetected,
+                onError: (error) => _showError(error),
+                config: ScannerConfig.continuousMode,
+              ),
+            ),
           ),
         ),
         

@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 
 // Windows/Linux camera support
 import 'package:camera/camera.dart' as camera;
@@ -40,79 +41,171 @@ abstract class PlatformCameraManager {
   }
 }
 
+// Global camera manager instance to prevent multiple cameras
+PlatformCameraManager? _globalCameraManager;
+bool _isGlobalCameraDisposing = false;
+
+/// Get or create the global camera manager instance
+PlatformCameraManager getGlobalCameraManager() {
+  if (_globalCameraManager == null || _isGlobalCameraDisposing) {
+    _globalCameraManager = PlatformCameraManager.create();
+    _isGlobalCameraDisposing = false;
+  }
+  return _globalCameraManager!;
+}
+
+/// Dispose the global camera manager
+Future<void> disposeGlobalCameraManager() async {
+  if (_globalCameraManager != null && !_isGlobalCameraDisposing) {
+    _isGlobalCameraDisposing = true;
+    await _globalCameraManager!.dispose();
+    _globalCameraManager = null;
+    _isGlobalCameraDisposing = false;
+  }
+}
+
 /// Windows/Linux camera implementation using the standard camera package
 class WindowsCameraManager extends PlatformCameraManager {
   camera.CameraController? _controller;
+  bool _isDisposing = false;
   
   @override
   Future<void> initialize(ScannerConfig config) async {
-    final cameras = await camera.availableCameras();
-    if (cameras.isEmpty) {
-      throw Exception('No cameras available');
-    }
+    if (_isDisposing) return;
     
-    _controller = camera.CameraController(
-      cameras.first,
-      camera.ResolutionPreset.high,
-      enableAudio: false,
-      imageFormatGroup: camera.ImageFormatGroup.bgra8888,
-    );
-    
-    await _controller!.initialize().timeout(
-      const Duration(seconds: 15),
-      onTimeout: () {
-        throw Exception('Camera initialization timed out (15s)');
-      },
-    );
-    
-    // Set focus mode
     try {
-      if (config.enableContinuousAutoFocus) {
-        await _controller!.setFocusMode(camera.FocusMode.auto);
-        debugPrint('✅ Windows: Continuous auto-focus enabled');
-      } else {
-        await _controller!.setFocusMode(camera.FocusMode.locked);
-        debugPrint('✅ Windows: Focus locked for performance');
+      debugPrint('🔍 WindowsCameraManager: Starting initialization...');
+      
+      // Ensure any existing camera is properly disposed first
+      if (_controller != null) {
+        debugPrint('🔍 WindowsCameraManager: Disposing existing camera...');
+        await dispose();
+        // Wait a bit more for Windows to fully release the camera
+        await Future.delayed(const Duration(milliseconds: 1000));
       }
+      
+      final cameras = await camera.availableCameras();
+      if (cameras.isEmpty) {
+        throw Exception('No cameras available');
+      }
+      
+      // Ensure we're on the main thread for camera operations
+      if (!WidgetsBinding.instance.isRootWidgetAttached) {
+        await Future.delayed(const Duration(milliseconds: 100));
+      }
+      
+      _controller = camera.CameraController(
+        cameras.first,
+        camera.ResolutionPreset.high,
+        enableAudio: false,
+        imageFormatGroup: camera.ImageFormatGroup.bgra8888,
+      );
+      
+      // Add error listener to handle threading issues
+      _controller!.addListener(() {
+        if (_controller!.value.hasError) {
+          debugPrint('⚠️ WindowsCameraManager: Camera error: ${_controller!.value.errorDescription}');
+        }
+      });
+      
+      await _controller!.initialize().timeout(
+        const Duration(seconds: 15),
+        onTimeout: () {
+          throw Exception('Camera initialization timed out (15s)');
+        },
+      );
+      
+      // Set focus mode
+      try {
+        if (config.enableContinuousAutoFocus) {
+          await _controller!.setFocusMode(camera.FocusMode.auto);
+          debugPrint('✅ Windows: Continuous auto-focus enabled');
+        } else {
+          await _controller!.setFocusMode(camera.FocusMode.locked);
+          debugPrint('✅ Windows: Focus locked for performance');
+        }
+      } catch (e) {
+        debugPrint('Windows focus mode setting failed (non-critical): $e');
+      }
+      
+      debugPrint('✅ Windows camera initialized successfully');
+      debugPrint('📷 Windows camera resolution: ${_controller!.value.previewSize}');
     } catch (e) {
-      debugPrint('Windows focus mode setting failed (non-critical): $e');
+      debugPrint('❌ WindowsCameraManager: Initialization failed: $e');
+      rethrow;
     }
-    
-    debugPrint('✅ Windows camera initialized successfully');
-    debugPrint('📷 Windows camera resolution: ${_controller!.value.previewSize}');
   }
   
   @override
   Future<void> dispose() async {
-    await _controller?.dispose();
-    _controller = null;
+    _isDisposing = true;
+    
+    try {
+      debugPrint('🔍 WindowsCameraManager: Disposing camera...');
+      
+      // Remove listener before disposing
+      _controller?.removeListener(() {});
+      
+      // Ensure proper disposal with timeout
+      if (_controller != null) {
+        await _controller!.dispose().timeout(
+          const Duration(seconds: 5),
+          onTimeout: () {
+            debugPrint('⚠️ WindowsCameraManager: Camera disposal timed out');
+          },
+        );
+      }
+      
+      _controller = null;
+      
+      // Add delay to ensure camera resources are fully released
+      await Future.delayed(const Duration(milliseconds: 1000));
+      
+      debugPrint('✅ WindowsCameraManager: Camera disposed successfully');
+    } catch (e) {
+      debugPrint('⚠️ WindowsCameraManager: Error during disposal: $e');
+    }
   }
   
   @override
   Future<Uint8List> takePicture() async {
-    if (_controller == null || !_controller!.value.isInitialized) {
+    if (_controller == null || !_controller!.value.isInitialized || _isDisposing) {
       throw Exception('Camera not initialized');
     }
     
-    final image = await _controller!.takePicture();
-    final bytes = await File(image.path).readAsBytes();
-    
-    // Clean up temporary file
     try {
-      await File(image.path).delete();
+      final image = await _controller!.takePicture();
+      final bytes = await File(image.path).readAsBytes();
+      
+      // Clean up temporary file
+      try {
+        await File(image.path).delete();
+      } catch (e) {
+        debugPrint('Failed to delete temp image: $e');
+      }
+      
+      return bytes;
     } catch (e) {
-      debugPrint('Failed to delete temp image: $e');
+      debugPrint('❌ WindowsCameraManager: Picture taking failed: $e');
+      rethrow;
     }
-    
-    return bytes;
   }
   
   @override
   Widget buildPreviewWidget() {
-    if (_controller == null || !_controller!.value.isInitialized) {
+    if (_controller == null || !_controller!.value.isInitialized || _isDisposing) {
       return const Center(child: CircularProgressIndicator());
     }
-    return camera.CameraPreview(_controller!);
+    
+    return Container(
+      color: Colors.black,
+      child: Center(
+        child: AspectRatio(
+          aspectRatio: _controller!.value.aspectRatio,
+          child: camera.CameraPreview(_controller!),
+        ),
+      ),
+    );
   }
   
   @override

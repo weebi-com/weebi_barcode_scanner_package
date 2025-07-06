@@ -51,7 +51,7 @@ class BarcodeScannerWidget extends StatefulWidget {
 }
 
 class _BarcodeScannerWidgetState extends State<BarcodeScannerWidget> with WidgetsBindingObserver {
-  final PlatformCameraManager _cameraManager = PlatformCameraManager.create();
+  late final PlatformCameraManager _cameraManager;
   bool _detectorInitialized = false;
   BarcodeResult? _latestBarcode;
   DateTime? _lastDetectionTime;
@@ -72,6 +72,7 @@ class _BarcodeScannerWidgetState extends State<BarcodeScannerWidget> with Widget
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _cameraManager = getGlobalCameraManager();
     _initializeScanner();
   }
 
@@ -98,10 +99,22 @@ class _BarcodeScannerWidgetState extends State<BarcodeScannerWidget> with Widget
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
     if (state == AppLifecycleState.paused) {
+      debugPrint('🔍 BarcodeScannerWidget: App paused, stopping camera...');
       _stopScanning();
+      // Dispose camera when app is paused
+      Future.delayed(const Duration(milliseconds: 500), () async {
+        if (!_isDisposing) {
+          try {
+            await _cameraManager.dispose();
+          } catch (e) {
+            debugPrint('Error disposing camera on app pause: $e');
+          }
+        }
+      });
     } else if (state == AppLifecycleState.resumed && !_isDisposing) {
-      // Give a delay after resuming
-      Future.delayed(const Duration(milliseconds: 500), () {
+      debugPrint('🔍 BarcodeScannerWidget: App resumed, reinitializing camera...');
+      // Give a longer delay after resuming to ensure camera is fully released
+      Future.delayed(const Duration(milliseconds: 1000), () {
         if (!_isDisposing) {
           _initializeScanner();
         }
@@ -115,12 +128,14 @@ class _BarcodeScannerWidgetState extends State<BarcodeScannerWidget> with Widget
     WidgetsBinding.instance.removeObserver(this);
     _stopScanning();
     
-    // Ensure camera is properly disposed
-    try {
-      _cameraManager.dispose();
-    } catch (e) {
-      debugPrint('Error disposing camera in widget dispose: $e');
-    }
+    // Use global camera disposal
+    Future.delayed(const Duration(milliseconds: 100), () async {
+      try {
+        await disposeGlobalCameraManager();
+      } catch (e) {
+        debugPrint('Error disposing global camera in widget dispose: $e');
+      }
+    });
     
     _scanTimer?.cancel();
     super.dispose();
@@ -165,7 +180,7 @@ class _BarcodeScannerWidgetState extends State<BarcodeScannerWidget> with Widget
     }
     
     // Extended wait for camera resource cleanup, especially important on Windows
-    await Future.delayed(const Duration(milliseconds: 1000));
+    await Future.delayed(const Duration(milliseconds: 2000));
     
     // Reinitialize
     if (!_isDisposing) {
@@ -197,96 +212,144 @@ class _BarcodeScannerWidgetState extends State<BarcodeScannerWidget> with Widget
     try {
       debugPrint('🔍 BarcodeScannerWidget: Initializing camera manager...');
       
+      // Ensure we're on the main thread for camera operations
+      if (!WidgetsBinding.instance.isRootWidgetAttached) {
+        await Future.delayed(const Duration(milliseconds: 100));
+      }
+      
       // Initialize camera with enhanced disposal handling
       await _cameraManager.initialize(widget.config);
       
-      debugPrint('🔍 BarcodeScannerWidget: Camera manager initialized, checking if ready...');
+      if (_isDisposing) return;
       
-      if (!_cameraManager.isInitialized || _isDisposing) {
-        debugPrint('❌ BarcodeScannerWidget: Camera manager not initialized properly');
-        setState(() {
-          _error = 'Failed to initialize camera';
-          _isInitializing = false;
-        });
-        return;
-      }
-
-      debugPrint('✅ BarcodeScannerWidget: Camera initialized successfully');
-
+      debugPrint('🔍 BarcodeScannerWidget: Camera initialized, initializing detector...');
       setState(() {
+        _initializationStatus = 'Initializing AI detector...';
         _initializationProgress = 0.3;
-        _initializationStatus = 'Camera ready, checking barcode model...';
       });
-
-      // Initialize barcode detector with auto-download if not already done
-      if (!core_barcode.BarcodeDetector.isInitialized) {
-        debugPrint('🔍 BarcodeScannerWidget: Initializing barcode detector...');
-        try {
-          await core_barcode.BarcodeDetector.initializeOrDownload(
-            widget.config.modelPath,
-            (progress, status) {
-              if (!_isDisposing) {
-                setState(() {
-                  _initializationProgress = 0.3 + (progress * 0.7); // Scale to 30% - 100% range
-                  _initializationStatus = status;
-                });
-              }
-            },
-          );
-          debugPrint('✅ BarcodeScannerWidget: Barcode detector initialized');
-        } catch (e) {
-          debugPrint('❌ BarcodeScannerWidget: Barcode detector initialization failed: $e');
-          setState(() {
-            _error = 'Failed to initialize barcode detector: $e';
-            _isInitializing = false;
-          });
-          return;
-        }
-      } else {
-        debugPrint('✅ BarcodeScannerWidget: Barcode detector already initialized');
-        setState(() {
-          _initializationProgress = 1.0;
-          _initializationStatus = 'Model already loaded';
-        });
-      }
-      _detectorInitialized = true;
-
+      
+      // Initialize the barcode detector
+      await core_barcode.BarcodeDetector.initializeOrDownload(
+        widget.config.modelPath,
+        (progress, status) {
+          if (!_isDisposing) {
+            setState(() {
+              _initializationProgress = 0.3 + (progress * 0.6);
+              _initializationStatus = status;
+            });
+          }
+        },
+      );
+      
+      if (_isDisposing) return;
+      
+      debugPrint('🔍 BarcodeScannerWidget: Detector initialized, starting scanning...');
+      setState(() {
+        _initializationProgress = 1.0;
+        _initializationStatus = 'Ready to scan';
+        _detectorInitialized = true;
+        _isInitializing = false;
+      });
+      
+      // Start scanning after a brief delay
+      await Future.delayed(const Duration(milliseconds: 500));
       if (!_isDisposing) {
-        debugPrint('✅ BarcodeScannerWidget: Scanner initialization completed successfully');
+        _startScanning();
+      }
+      
+    } catch (e) {
+      debugPrint('❌ BarcodeScannerWidget: Initialization failed: $e');
+      if (!_isDisposing) {
         setState(() {
+          _error = 'Failed to initialize scanner: $e';
           _isInitializing = false;
         });
         
-        // Start scanning after a short delay
-        await Future.delayed(const Duration(milliseconds: 200));
-        if (!_isDisposing) {
-          debugPrint('🔍 BarcodeScannerWidget: Starting scanning...');
-          _startScanning();
-        }
-      }
-    } catch (e) {
-      if (!_isDisposing) {
-        debugPrint('❌ BarcodeScannerWidget: Error initializing scanner: $e');
-        setState(() {
-          _error = 'Camera initialization failed: $e';
-          _isInitializing = false;
-        });
+        widget.onError?.call('Scanner initialization failed: $e');
       }
     }
   }
 
-  Future<void> _startScanning() async {
-    if (_isScanning || _isDisposing || !_cameraManager.isInitialized) return;
+  void _startScanning() {
+    if (_isDisposing || !_detectorInitialized || !_cameraManager.isInitialized) {
+      debugPrint('🔍 BarcodeScannerWidget: Cannot start scanning - not ready');
+      return;
+    }
 
-    _isScanning = true;
-    
-    // Use timer-based scanning for all platforms
-    _scanTimer = Timer.periodic(const Duration(milliseconds: 500), (timer) {
-      if (!_isScanning || _isDisposing) {
+    debugPrint('🔍 BarcodeScannerWidget: Starting scanning...');
+    setState(() {
+      _isScanning = true;
+    });
+
+    _scanTimer = Timer.periodic(widget.config.scanInterval, (timer) async {
+      if (_isDisposing || !_isScanning || !_detectorInitialized) {
         timer.cancel();
         return;
       }
-      _processFrame();
+
+      try {
+        // Ensure we're on the main thread for camera operations
+        if (!WidgetsBinding.instance.isRootWidgetAttached) {
+          await Future.delayed(const Duration(milliseconds: 50));
+          return;
+        }
+
+        final imageBytes = await _cameraManager.takePicture();
+        
+        if (_isDisposing) return;
+
+        final results = await core_barcode.BarcodeDetector.processImage(
+          format: core_barcode.ImageFormat.jpeg,
+          bytes: imageBytes,
+          useSuperResolution: widget.config.useSuperResolution,
+        );
+
+        if (_isDisposing) return;
+
+        if (results.isNotEmpty) {
+          final result = results.first;
+          final now = DateTime.now();
+          
+          // Debounce detections to avoid spam
+          if (_lastDetectionTime == null || 
+              now.difference(_lastDetectionTime!).inMilliseconds > 1000) { // Use 1 second debounce
+            
+            if (_latestBarcode?.text != result.text) {
+              debugPrint('🔍 BarcodeScannerWidget: Detected barcode: ${result.text}');
+              
+              // Convert core BarcodeResult to widget BarcodeResult
+              final widgetResult = BarcodeResult(
+                text: result.text,
+                format: result.format,
+                confidence: result.bounds?.confidence,
+                location: result.bounds != null ? {
+                  'left': result.bounds!.left,
+                  'top': result.bounds!.top,
+                  'right': result.bounds!.right,
+                  'bottom': result.bounds!.bottom,
+                } : null,
+              );
+              
+              _latestBarcode = widgetResult;
+              _lastDetectionTime = now;
+              
+              // Call callback on main thread
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!_isDisposing) {
+                  widget.onBarcodeDetected(widgetResult);
+                }
+              });
+            }
+          }
+        }
+      } catch (e) {
+        debugPrint('⚠️ BarcodeScannerWidget: Scanning error: $e');
+        // Don't call onError for every frame error, only for critical errors
+        if (e.toString().contains('Camera not initialized') || 
+            e.toString().contains('thread')) {
+          widget.onError?.call('Camera error: $e');
+        }
+      }
     });
   }
 
@@ -294,46 +357,6 @@ class _BarcodeScannerWidgetState extends State<BarcodeScannerWidget> with Widget
     _isScanning = false;
     _scanTimer?.cancel();
     _scanTimer = null;
-  }
-
-  Future<void> _processFrame() async {
-    if (_isDisposing || !_detectorInitialized || !_cameraManager.isInitialized) return;
-
-    try {
-      final imageBytes = await _cameraManager.takePicture();
-      if (imageBytes.isEmpty || _isDisposing) return;
-
-      final results = await core_barcode.BarcodeDetector.processImage(
-        format: core_barcode.ImageFormat.jpeg,
-        bytes: imageBytes,
-      );
-
-      if (results.isNotEmpty && !_isDisposing) {
-        final coreResult = results.first;
-        
-        // Convert to our BarcodeResult format
-        final result = BarcodeResult(
-          text: coreResult.text,
-          format: coreResult.format,
-          confidence: coreResult.bounds?.confidence,
-          location: coreResult.bounds != null ? {
-            'left': coreResult.bounds!.left,
-            'top': coreResult.bounds!.top,
-            'right': coreResult.bounds!.right,
-            'bottom': coreResult.bounds!.bottom,
-          } : null,
-        );
-        
-        setState(() {
-          _latestBarcode = result;
-          _lastDetectionTime = DateTime.now();
-        });
-
-        widget.onBarcodeDetected?.call(result);
-      }
-    } catch (e) {
-      debugPrint('Error processing frame: $e');
-    }
   }
 
   Future<void> _reinitializeForHotReload() async {
@@ -486,7 +509,15 @@ class _BarcodeScannerWidgetState extends State<BarcodeScannerWidget> with Widget
   }
 
   Widget _buildCameraPreview(BuildContext context) {
-    return _cameraManager.buildPreviewWidget();
+    return Container(
+      color: Colors.black,
+      child: Center(
+        child: AspectRatio(
+          aspectRatio: 4/3, // Standard camera aspect ratio
+          child: _cameraManager.buildPreviewWidget(),
+        ),
+      ),
+    );
   }
 }
 
