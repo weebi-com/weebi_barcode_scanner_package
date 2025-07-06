@@ -1,41 +1,85 @@
-# Miscellaneous
-*.class
-*.log
-*.pyc
-*.swp
 .DS_Store
 .atom/
-.buildlog/
-.history
-.svn/
-migrate_working_dir/
-
-# IntelliJ related
-*.iml
-*.ipr
-*.iws
 .idea/
+.vscode/*
+.melos_tool/*
+!.vscode/tasks.json
+!.vscode/settings.json
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
-
-# Flutter/Dart/Pub related
-# Libraries should not include pubspec.lock, per https://dart.dev/guides/libraries/private-files#pubspeclock.
-/pubspec.lock
-**/doc/api/
+.packages
+.pub/
 .dart_tool/
+pubspec.lock
+pubspec_overrides.yaml
+flutter_export_environment.sh
+
+examples/all_plugins/pubspec.yaml
+
+Podfile.lock
+Pods/
+.symlinks/
+**/Flutter/ephemeral/
+**/Flutter/Flutter.podspec
+**/Flutter/App.framework/
+**/Flutter/Flutter.framework/
+**/Flutter/Generated.xcconfig
+**/Flutter/flutter_assets/
+ServiceDefinitions.json
+xcuserdata/
+
+local.properties
+keystore.properties
+.gradle/
+gradlew
+gradlew.bat
+gradle-wrapper.jar
+*.iml
+
+GeneratedPluginRegistrant.h
+GeneratedPluginRegistrant.m
+GeneratedPluginRegistrant.java
+GeneratedPluginRegistrant.swift
+generated_plugin_registrant.dart
+
+build/
 .flutter-plugins
 .flutter-plugins-dependencies
-build/
-example/pubspec.lock
 
-# Neural network model files should not be committed (but Dart model classes should be)
-example/models/
-*.rten
-# Keep lib/src/dart_barcode/src/models/ - these are Dart source files, not model weight files
-example/fix_windows_plugins.ps1
-macos/Flutter/ephemeral/flutter_export_environment.sh
-macos/Flutter/ephemeral/Flutter-Generated.xcconfig
-weebi_openfoodfacts
+.project
+.classpath
+.settings
+.last_build_id
+
+# Docs
+
+# Dependencies
+node_modules
+
+# ArtCalibreion
+website/build
+
+# Generated files
+.docusaurus
+.cache-loader
+
+# Misc
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+database-debug.log
+ui-debug.log
+weebi_app/build
+weebi_app/android/huaweikey.properties
+weebi_app/macos/Flutter/ephemeral
+weebi_app/ios/build
+weebi_app/ios/Flutter/Debug.xcconfig
+weebi_app/lib/src/core/const.dart
+/weebi_app/linux/flutter
+/packages/services/test/19h25m26s_tickets.json
+/weebi_app/android/app/.cxx

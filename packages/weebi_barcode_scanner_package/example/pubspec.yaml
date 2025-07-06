@@ -1,0 +1,59 @@
+name: barcode_scanner_example
+description: "Example app demonstrating weebi_barcode_scanner_package"
+
+publish_to: 'none'
+
+version: 1.6.0+1
+
+environment:
+  sdk: '>=3.1.5 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # The following adds the Cupertino Icons font to your application.
+  cupertino_icons: ^1.0.2
+
+  # Scanner package - contains all camera dependencies
+  weebi_barcode_scanner:
+    path: ../
+  # Camera and image processing 
+  camera: ^0.11.1
+  camera_windows: ^0.2.6+2
+  camera_macos: ^0.0.9
+  image: ^4.0.17
+  path_provider: ^2.0.15
+  path: ^1.8.3
+  
+
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^2.0.0
+
+flutter:
+  # The following line ensures that the Material Icons font is
+  # included with your application, so that you can use the icons in
+  # the material Icons class.
+  uses-material-design: true
+
+  # Model is now downloaded automatically - no need to bundle in assets
+  # The scanner will automatically download the model from Hugging Face on first use
+  assets:
+    
+    # PLATFORM-SPECIFIC: Include only what you need
+    # Windows (10.87 MB)
+    # - windows/rust_barcode_lib.dll  # Not needed - dart_barcode handles native loading
+    
+    # macOS (22 MB universal binary)  
+    # - macos/Frameworks/
+    
+    # Android (per architecture)
+    # - android/jniLibs/arm64-v8a/librust_barcode_lib.so
+    # - android/jniLibs/armeabi-v7a/librust_barcode_lib.so
+    # - android/jniLibs/x86_64/librust_barcode_lib.so
+    
+    # iOS
+    # - ios/Frameworks/librust_barcode_lib.dylib 
