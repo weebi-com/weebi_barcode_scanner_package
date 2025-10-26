@@ -1,3 +1,7 @@
+## 1.6.9 - oct 2025
+
+- fix macos build
+
 ## 1.6.8
 
 - cleaning
