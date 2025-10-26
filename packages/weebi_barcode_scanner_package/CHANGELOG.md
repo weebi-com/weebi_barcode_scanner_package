@@ -1,3 +1,7 @@
+## 1.7.3 - oct 2025
+
+- fix macos build
+
 ## 1.7.1
 
 - fix windows example by removing permission handler
